@@ -5,3 +5,12 @@
 .novelai-floating-button[data-state="success"] { color: #3ecf8e; }
 .novelai-floating-button[data-state="error"] { color: #f87171; }
 .novelai-floor-button { margin-left: 4px; font-size: 11px; padding: 3px 7px; }
+.novelai-floating-panel { position: fixed; z-index: 10001; width: 190px; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(24,24,28,.97); box-shadow: 0 8px 28px rgba(0,0,0,.45); color: var(--SmartThemeBodyColor); }
+.novelai-floating-panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; font-size: 12px; }
+.novelai-floating-panel select, .novelai-floating-panel button { min-width: 100px; padding: 6px 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; background: #24242a; color: inherit; }
+.novelai-floating-panel button { cursor: pointer; margin: 3px; }
+.novelai-settings-modal { position: fixed; inset: 0; z-index: 10002; display: grid; place-items: center; background: rgba(0,0,0,.62); }
+.novelai-settings-dialog { width: min(460px, calc(100vw - 32px)); padding: 18px; border-radius: 12px; background: var(--SmartThemeBlurTintColor, #202027); color: var(--SmartThemeBodyColor); box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+.novelai-settings-dialog label { display: block; margin: 10px 0; }
+.novelai-settings-dialog input, .novelai-settings-dialog select { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 7px; }
+.novelai-settings-dialog button { margin-right: 8px; padding: 7px 12px; }
