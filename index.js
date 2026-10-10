@@ -15,7 +15,7 @@ function setupSettings() {
     if (settingsSetupPromise) return settingsSetupPromise;
     settingsSetupPromise = (async () => {
         if (document.getElementById('huamanhua-settings')) return;
-        const host = document.querySelector('#extensions_settings2');
+        const host = document.querySelector('#extensions_settings');
         if (!host) return;
         let html;
         try {
@@ -57,3 +57,4 @@ export async function cleanup() {
     settingsRoot = null;
     settingsSetupPromise = null;
 }
+
