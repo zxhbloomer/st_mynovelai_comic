@@ -1573,6 +1573,11 @@ function handleFloatingOutsideClick(e) {
 function createFloatingButton() {
     if (floatingEl) return;
 
+    // The manifest can invoke initialization more than once during extension
+    // discovery/install. Keep a page-level singleton as well as the module
+    // guard so a second module instance cannot create a duplicate panel.
+    if (document.getElementById('nd-floating-global')) return;
+
     const settings = getSettings();
     if (settings.showFloatingButton !== true) return;
 
