@@ -37,7 +37,12 @@ function setupSettings() {
             saveSettingsDebounced();
             const runtime = await loadRuntime();
             window.isXiaobaixEnabled = enabled.checked;
-            if (enabled.checked) await runtime.initNovelDraw();
+            if (enabled.checked) {
+                await runtime.initNovelDraw();
+                // Keep the extension area to one enable switch while exposing
+                // the original NovelAI configuration dialog on first enable.
+                await runtime.openNovelDrawSettings?.();
+            }
             else await runtime.cleanupNovelDraw();
         });
     })();
