@@ -1,12 +1,17 @@
 import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
 import { extensionFolderPath } from './core/constants.js';
-import { cleanupNovelDraw as cleanupSource, initNovelDraw as initSource } from './modules/draw/providers/novelai/novel-draw.js';
 
 const EXT_ID = 'HuaManhua';
 let settingsRoot = null;
+let sourceModulePromise = null;
+
+function loadSourceModule() {
+    sourceModulePromise ||= import('./modules/draw/providers/novelai/novel-draw.js');
+    return sourceModulePromise;
+}
 
 async function waitForSettingsRoot() {
-    for (let i = 0; i < 100; i += 1) {
+    for (let i = 0; i < 400; i += 1) {
         const root = document.querySelector('#extensions_settings');
         if (root) return root;
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -25,12 +30,20 @@ async function mountSettings() {
     host.append(wrapper);
     settingsRoot = wrapper;
     const enabled = wrapper.querySelector('#huamanhua_enabled');
+    if (!enabled) throw new Error('花漫画设置控件缺失');
     enabled.checked = extension_settings[EXT_ID].enabled === true;
     enabled.addEventListener('change', async () => {
         extension_settings[EXT_ID].enabled = enabled.checked;
         saveSettingsDebounced();
-        if (enabled.checked) await initSource();
-        else await cleanupSource();
+        if (enabled.checked) {
+            const source = await loadSourceModule();
+            window.isXiaobaixEnabled = true;
+            await source.initNovelDraw();
+        } else {
+            const source = await loadSourceModule();
+            await source.cleanupNovelDraw();
+            window.isXiaobaixEnabled = false;
+        }
     });
 }
 
@@ -39,11 +52,15 @@ export async function initNovelDraw() {
     await mountSettings();
     window.isXiaobaixEnabled = extension_settings[EXT_ID].enabled === true;
     if (!window.isXiaobaixEnabled) return false;
-    return await initSource();
+    const source = await loadSourceModule();
+    return await source.initNovelDraw();
 }
 
 export async function cleanup() {
-    await cleanupSource();
+    if (sourceModulePromise) {
+        const source = await sourceModulePromise;
+        await source.cleanupNovelDraw();
+    }
     settingsRoot?.remove();
     settingsRoot = null;
 }
