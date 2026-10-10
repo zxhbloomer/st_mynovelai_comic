@@ -11,6 +11,7 @@ import {
     updateSettingsPersistent,
     findLastAIMessageId,
     getGenerationState,
+    getGenerationPhase,
     abortGeneration,
 } from './novel-draw.js';
 import { registerToToolbar, removeFromToolbar } from '../../../../widgets/message-toolbar.js';
@@ -27,6 +28,8 @@ import {
     getPendingDrawWorkState,
 } from '../../shared/draw-run-controls.js';
 import { isDrawRunPendingError } from '../../shared/draw-run-production.js';
+import { removeChatImageSlot } from '../../shared/image-card-actions.js';
+import { clearFloorImageSlots } from '../../shared/floor-image-clear.js';
 import {
     formatDrawRunProgress,
     getDrawRunProgressIcon,
@@ -656,6 +659,9 @@ function createFloorPanelElement(messageId) {
     controls.append(autoToggle, settingsBtn);
 
     menu.append(card, controls);
+    const clearButton = createEl('button', 'nd-clear-floor-images menu_button', '清空本楼层图片');
+    clearButton.type = 'button';
+    menu.appendChild(clearButton);
 
     root.append(capsule, detail, menu);
     return root;
@@ -980,6 +986,28 @@ async function handleFloorAbort(messageId) {
 
 function bindFloorPanelEvents(panelData) {
     const { messageId, root: el } = panelData;
+    el.querySelector('.nd-clear-floor-images')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const button = e.currentTarget;
+        if (button.disabled) return;
+        button.disabled = true;
+        const target = captureDrawCancellationTarget(messageId);
+        try {
+            const pending = await getPendingDrawWorkState(messageId);
+            if (!isDrawCancellationTargetCurrent(target)) throw new Error('聊天或楼层版本已变化，请重新操作');
+            if (getGenerationPhase(messageId) || pending.pending) {
+                throw new Error('本楼层仍在生成图片，请先中止或等待完成后再清空');
+            }
+            const count = await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+            el.classList.remove('expanded');
+            toastr?.success?.(count ? `已清空本楼层 ${count} 个图片位置` : '本楼层没有花漫画图片');
+        } catch (error) {
+            console.error('[花漫画] 清空本楼层图片失败:', error);
+            toastr?.error?.(error.message);
+        } finally {
+            button.disabled = false;
+        }
+    });
 
     el.querySelector('.nd-btn-draw')?.addEventListener('click', (e) => {
         e.stopPropagation();
