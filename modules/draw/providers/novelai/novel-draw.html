@@ -907,6 +907,10 @@ select.input { cursor: pointer; }
                             <input id="nd_scale" type="number" class="input" placeholder="5" step="0.1" title="Prompt Guidance：提示词引导强度（CFG）">
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Prompt Guidance Rescale（引导重缩放）</label>
+                            <input id="nd_cfg_rescale" type="number" class="input" value="0" min="0" max="1" step="0.05">
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Seed</label>
                             <input id="nd_seed" type="number" class="input" placeholder="-1" title="Seed：随机种子，-1 为随机">
                         </div>
@@ -983,10 +987,6 @@ select.input { cursor: pointer; }
                                 <option value="false">关闭</option>
                                 <option value="true">开启</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prompt Guidance Rescale（引导重缩放）</label>
-                            <input id="nd_cfg_rescale" type="number" class="input" value="0" min="0" max="1" step="0.05">
                         </div>
                     </div>
                     <div id="nd_variety_boost_group" class="form-group" style="margin-top:12px;">
