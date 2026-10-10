@@ -1,0 +1,13 @@
+{
+    "name": "sillytavern-novelai",
+    "version": "1.0.0",
+    "type": "commonjs",
+    "main": "index.js",
+    "description": "Standalone NovelAI image jobs for SillyTavern.",
+    "private": true,
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
+
+

@@ -1,0 +1,13 @@
+{
+    "name": "st-mynovelai-comic",
+    "version": "1.0.0",
+    "private": true,
+    "description": "花漫画：独立的 SillyTavern NovelAI 扩展与服务端插件。",
+    "type": "module",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "scripts": {
+        "test:smoke": "node tests/novelai/core-smoke.test.mjs && node tests/novelai/plugin-smoke.test.mjs && node tests/novelai/route-smoke.cjs && node tests/novelai/prompt-learning-smoke.test.mjs && node tests/novelai/v5-stream-smoke.test.mjs && node tests/novelai/transport-mode-smoke.test.mjs && node tests/novelai/install-layout-smoke.test.mjs"
+    }
+}

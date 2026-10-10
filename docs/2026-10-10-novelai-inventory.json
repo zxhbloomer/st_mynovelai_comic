@@ -1,0 +1,15 @@
+{
+  "sourceRoot": "D:/game/tools/github/LittleWhiteBox-main",
+  "observedAt": "2026-10-10",
+  "providerFiles": [
+    "novel-draw.js", "novel-draw.html", "floating-panel.js", "compiler.js",
+    "novel-request-config.js", "novel-v5-request.js", "novel-v5-stream.js",
+    "novel-image-response.js", "novel-model-capabilities.js", "novel-prompts.js",
+    "novel-prompt-import.js", "novel-prompt-migration.js", "cloud-presets.js",
+    "novel-character-learning.js", "novel-backend-job-result.js"
+  ],
+  "serverFiles": ["adapter.js", "client.js", "v5-stream.js", "vendor/novel-v5-parser.cjs"],
+  "verifiedBehaviors": ["legacy-image", "v4", "v4.5", "v5-request", "v5-stream", "zip-and-multi-image-response", "prompt-guides", "prompt-import", "prompt-migration", "cloud-presets", "character-learning", "backend-job-result", "floating-panel", "floor-controls"],
+  "requiredSharedDomains": ["scene-planner", "worldbook", "serial-image-queue", "recoverable-image-jobs", "draw-run-controls", "image-marker-syntax", "scene-placement", "prepared-chat-images", "floor-image-job", "gallery-cache", "image-card-actions", "message-toolbar"],
+  "status": "inventory-complete-source-inspection-real-host-unverified"
+}

@@ -1,0 +1,10 @@
+{
+    "display_name": "花漫画",
+    "loading_order": 8,
+    "js": "index.js",
+    "css": "style.css",
+    "author": "花漫画",
+    "version": "1.0.0",
+    "homePage": "https://github.com/",
+    "hooks": { "activate": "initNovelAIExtension" }
+}
