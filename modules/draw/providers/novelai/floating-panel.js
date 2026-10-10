@@ -403,6 +403,17 @@ const STYLES = `
 .nd-inner-sep { display: none; }
 
 .nd-controls { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.nd-menu .nd-clear-floor-images {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 34px;
+    margin: 8px 0 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    text-align: center;
+}
 
 .nd-auto {
     flex: 1;
