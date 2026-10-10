@@ -16,12 +16,21 @@ async function mountSettings() {
     let settingsHtml;
     const context = globalThis.SillyTavern?.getContext?.();
     if (typeof context?.renderExtensionTemplateAsync === 'function') {
-        settingsHtml = await context.renderExtensionTemplateAsync('third-party/st_mynovelai_comic', 'settings');
-    } else {
-        const response = await fetch(`${extensionFolderPath}/settings.html`, { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`花漫画设置加载失败（HTTP ${response.status}）`);
-        settingsHtml = await response.text();
+        try {
+            settingsHtml = await context.renderExtensionTemplateAsync('third-party/st_mynovelai_comic', 'settings');
+        } catch (error) {
+            console.warn('[花漫画] 模板 API 加载失败，使用内置设置标记:', error);
+        }
     }
+    if (!settingsHtml) {
+        try {
+            const response = await fetch(`${extensionFolderPath}/settings.html`, { cache: 'no-cache' });
+            if (response.ok) settingsHtml = await response.text();
+        } catch (error) {
+            console.warn('[花漫画] 设置文件加载失败，使用内置设置标记:', error);
+        }
+    }
+    settingsHtml ||= '<div class="inline-drawer" id="huamanhua-settings-drawer"><div class="inline-drawer-toggle inline-drawer-header"><b>花漫画</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div><div class="inline-drawer-content"><div class="flex-container alignItemsCenter"><input type="checkbox" id="huamanhua_enabled"><label for="huamanhua_enabled">花漫画：启用 / 禁用</label></div></div></div>';
     const wrapper = document.createElement('div');
     wrapper.id = 'huamanhua-settings';
     wrapper.innerHTML = settingsHtml;
@@ -66,3 +75,4 @@ export async function cleanup() {
 }
 
 void initNovelDraw().catch(error => console.error('[花漫画] 设置加载失败:', error));
+
