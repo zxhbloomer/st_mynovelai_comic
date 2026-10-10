@@ -3821,12 +3821,16 @@ export async function openNovelDrawSettings() {
 }
 
 export async function enableNovelDrawFloatingButton() {
-    const ok = await updateSettingsPersistent((settings) => {
-        settings.showFloatingButton = true;
-    }, '悬浮按钮已启用', { silent: true });
-    if (!ok) return false;
+    // Render immediately after the HuaManhua switch is enabled. Persistence
+    // is best-effort so a storage/API failure cannot hide the live control.
+    const settings = getSettings();
+    settings.showFloatingButton = true;
     const floatingPanel = await import('./floating-panel.js');
     floatingPanel.updateButtonVisibility?.(getSettings().showFloorButton !== false, true);
+    const ok = await updateSettingsPersistent((next) => {
+        next.showFloatingButton = true;
+    }, '悬浮按钮已启用', { silent: true });
+    if (!ok) console.warn('[NovelDraw] 悬浮按钮已显示，但配置持久化失败');
     return true;
 }
 
