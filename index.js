@@ -1,5 +1,4 @@
 import { extension_settings, renderExtensionTemplateAsync, saveSettingsDebounced } from '../../../extensions.js';
-import { cleanupNovelDraw, initNovelDraw as initNovelRuntime } from './modules/draw/providers/novelai/novel-draw.js';
 
 const EXT_ID = 'HuaManhua';
 let settingsRoot = null;
