@@ -455,10 +455,16 @@ const STYLES = `
 }
 
 .nd-floating-global .nd-capsule {
+    width: 92px;
     background: var(--nd-bg-solid);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     touch-action: none;
     cursor: grab;
+}
+
+.nd-floating-global .nd-btn-draw {
+    font-size: 13px;
+    white-space: nowrap;
 }
 
 .nd-floating-global .nd-capsule:active { cursor: grabbing; }
