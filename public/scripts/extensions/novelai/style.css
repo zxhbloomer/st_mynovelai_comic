@@ -1,7 +1,0 @@
-.novelai-extension { color: var(--SmartThemeBodyColor); }
-.novelai-extension button { cursor: pointer; }
-.novelai-floating-button { position: fixed; z-index: 10000; min-width: 88px; padding: 8px 12px; border: 1px solid rgba(212,165,116,.55); border-radius: 18px; background: rgba(24,24,28,.94); color: #e6edf3; cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,.35); }
-.novelai-floating-button[data-state="busy"] { color: #f0b429; }
-.novelai-floating-button[data-state="success"] { color: #3ecf8e; }
-.novelai-floating-button[data-state="error"] { color: #f87171; }
-.novelai-floor-button { margin-left: 4px; font-size: 11px; padding: 3px 7px; }

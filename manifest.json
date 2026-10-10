@@ -2,7 +2,7 @@
     "display_name": "花漫画",
     "loading_order": 8,
     "js": "index.js",
-    "css": "public/scripts/extensions/novelai/style.css",
+    "css": "style.css",
     "author": "花漫画",
     "version": "1.0.0",
     "homePage": "https://github.com/zxhbloomer/st_mynovelai_comic",

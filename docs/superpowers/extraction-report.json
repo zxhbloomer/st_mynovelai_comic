@@ -1,0 +1,199 @@
+{
+  "files": [
+    "core/after-ai-gate.js",
+    "core/constants.js",
+    "core/debug-core.js",
+    "core/error-details.js",
+    "core/event-manager.js",
+    "core/iframe-messaging.js",
+    "core/server-storage.js",
+    "core/storage-file.js",
+    "core/variable-path.js",
+    "libs/dexie.mjs",
+    "libs/fflate.mjs",
+    "libs/js-sha256.mjs",
+    "libs/js-yaml.mjs",
+    "libs/minisearch.mjs",
+    "libs/msgpack.mjs",
+    "modules/agent-core/adapters/request-inspection.js",
+    "modules/agent-core/config.js",
+    "modules/agent-core/dist/agent-core-browser.js",
+    "modules/agent-core/provider-auth.js",
+    "modules/agent-core/provider-resolution.js",
+    "modules/agent-core/reasoning-capabilities.js",
+    "modules/agent-core/reasoning-config.js",
+    "modules/agent-core/runtime/loose-tool-arguments.js",
+    "modules/agent-core/runtime/protocol.js",
+    "modules/agent-core/settings-repository.js",
+    "modules/agent-core/tavily-search.js",
+    "modules/agent-core/ui/settings-markup.js",
+    "modules/agent-core/ui/settings-panel.js",
+    "modules/draw/providers/comfyui/compiler.js",
+    "modules/draw/providers/novelai/TAG编写指南-V4.5.md",
+    "modules/draw/providers/novelai/cloud-presets.js",
+    "modules/draw/providers/novelai/compiler.js",
+    "modules/draw/providers/novelai/floating-panel.js",
+    "modules/draw/providers/novelai/novel-backend-job-result.js",
+    "modules/draw/providers/novelai/novel-character-learning.js",
+    "modules/draw/providers/novelai/novel-draw.html",
+    "modules/draw/providers/novelai/novel-draw.js",
+    "modules/draw/providers/novelai/novel-image-response.js",
+    "modules/draw/providers/novelai/novel-model-capabilities.js",
+    "modules/draw/providers/novelai/novel-prompt-import.js",
+    "modules/draw/providers/novelai/novel-prompt-migration.js",
+    "modules/draw/providers/novelai/novel-prompts.js",
+    "modules/draw/providers/novelai/novel-request-config.js",
+    "modules/draw/providers/novelai/novel-v5-request.js",
+    "modules/draw/providers/novelai/novel-v5-stream.js",
+    "modules/draw/providers/novelai/tests/cloud-presets.test.js",
+    "modules/draw/providers/novelai/tests/fixtures/novel-params-preset-v1.json",
+    "modules/draw/providers/novelai/tests/fixtures/novel-scene-rules-template-v10.md",
+    "modules/draw/providers/novelai/tests/fixtures/novel-scene-rules-template-v11.md",
+    "modules/draw/providers/novelai/tests/fixtures/novel-scene-rules-template-v12.md",
+    "modules/draw/providers/novelai/tests/fixtures/novel-scene-rules-template-v8.md",
+    "modules/draw/providers/novelai/tests/fixtures/novel-scene-rules-template-v9.md",
+    "modules/draw/providers/novelai/tests/fixtures/novel-settings-template-v6.json",
+    "modules/draw/providers/novelai/tests/fixtures/novel-settings-template-v7.json",
+    "modules/draw/providers/novelai/tests/fixtures/novel-settings-upstream-v7.json",
+    "modules/draw/providers/novelai/tests/novel-backend-job-result.test.js",
+    "modules/draw/providers/novelai/tests/novel-character-learning.test.js",
+    "modules/draw/providers/novelai/tests/novel-image-response.test.js",
+    "modules/draw/providers/novelai/tests/novel-model-capabilities.test.js",
+    "modules/draw/providers/novelai/tests/novel-prompt-guides.test.js",
+    "modules/draw/providers/novelai/tests/novel-prompt-import.test.js",
+    "modules/draw/providers/novelai/tests/novel-prompt-migration.test.js",
+    "modules/draw/providers/novelai/tests/novel-request-config.test.js",
+    "modules/draw/providers/novelai/tests/novel-v5-request.test.js",
+    "modules/draw/providers/novelai/tests/novel-v5-stream.test.js",
+    "modules/draw/providers/novelai/提示词编写指南-V5.md",
+    "modules/draw/providers/sd-webui/compiler.js",
+    "modules/draw/shared/agent-settings-surface.js",
+    "modules/draw/shared/backend-image-jobs.js",
+    "modules/draw/shared/card-tag-editor.js",
+    "modules/draw/shared/character-prompts.js",
+    "modules/draw/shared/character-selection.js",
+    "modules/draw/shared/chat-image-placement.js",
+    "modules/draw/shared/chat-message-image-markup.js",
+    "modules/draw/shared/confirmable-chat-save.js",
+    "modules/draw/shared/danbooru-local-db.js",
+    "modules/draw/shared/data/danbooru-chars.dat",
+    "modules/draw/shared/draw-agent-runtime.js",
+    "modules/draw/shared/draw-agent.js",
+    "modules/draw/shared/draw-capsule-copy.js",
+    "modules/draw/shared/draw-common.js",
+    "modules/draw/shared/draw-run-activity.js",
+    "modules/draw/shared/draw-run-client.js",
+    "modules/draw/shared/draw-run-controls.js",
+    "modules/draw/shared/draw-run-coordinator.js",
+    "modules/draw/shared/draw-run-identifiers.js",
+    "modules/draw/shared/draw-run-markers.js",
+    "modules/draw/shared/draw-run-production.js",
+    "modules/draw/shared/draw-run-ui-state.js",
+    "modules/draw/shared/draw-settings.js",
+    "modules/draw/shared/floor-image-job.js",
+    "modules/draw/shared/gallery-cache.js",
+    "modules/draw/shared/generation-fingerprint.js",
+    "modules/draw/shared/image-card-actions.js",
+    "modules/draw/shared/image-card-redraw-provider.js",
+    "modules/draw/shared/image-job-delivery-target.js",
+    "modules/draw/shared/image-marker-syntax.js",
+    "modules/draw/shared/image-record.js",
+    "modules/draw/shared/image-request-outcome.js",
+    "modules/draw/shared/page-farewell.js",
+    "modules/draw/shared/pending-image-jobs.js",
+    "modules/draw/shared/prepared-chat-images.js",
+    "modules/draw/shared/prepared-image-delivery.js",
+    "modules/draw/shared/prepared-image-input.js",
+    "modules/draw/shared/prepared-slot-executor.js",
+    "modules/draw/shared/prompt-template-migration.js",
+    "modules/draw/shared/prompts/opening-pov.md",
+    "modules/draw/shared/prompts/opening.md",
+    "modules/draw/shared/prompts/scene-rules.md",
+    "modules/draw/shared/recoverable-image-jobs.js",
+    "modules/draw/shared/scene-placement.js",
+    "modules/draw/shared/scene-plan-arguments.js",
+    "modules/draw/shared/scene-plan-contract.js",
+    "modules/draw/shared/scene-plan-tool.js",
+    "modules/draw/shared/scene-planner-debug.js",
+    "modules/draw/shared/scene-planner-error-ui.js",
+    "modules/draw/shared/scene-planner-executor.js",
+    "modules/draw/shared/scene-planner-frame.js",
+    "modules/draw/shared/scene-planner-opening-migration.js",
+    "modules/draw/shared/scene-planner-presets.js",
+    "modules/draw/shared/scene-planner-profile.js",
+    "modules/draw/shared/scene-planner-templates.js",
+    "modules/draw/shared/scene-planner.js",
+    "modules/draw/shared/scene-prompt-expansion.js",
+    "modules/draw/shared/scene-slot-dom.js",
+    "modules/draw/shared/scene-source.js",
+    "modules/draw/shared/serial-image-request-queue.js",
+    "modules/draw/shared/slot-activity.js",
+    "modules/draw/shared/worldbook-processor.js",
+    "modules/variables/var-commands.js",
+    "shared/common/generate-interceptor.js",
+    "shared/host-llm/chat-completions/client.js",
+    "shared/host-llm/chat-completions/sse.js",
+    "shared/host-llm/model-family.js",
+    "shared/host-request-headers.js",
+    "widgets/message-toolbar.js"
+  ],
+  "hostImports": {
+    "modules\\draw\\shared\\scene-prompt-expansion.js": [
+      "../../../../../../../script.js"
+    ],
+    "modules\\variables\\var-commands.js": [
+      "../../../../../extensions.js",
+      "../../../../../variables.js"
+    ],
+    "core\\event-manager.js": [
+      "../../../../../script.js"
+    ],
+    "modules\\draw\\providers\\novelai\\novel-draw.js": [
+      "../../../../../../../extensions.js",
+      "../../../../../../../utils.js",
+      "../../../../../../../../script.js"
+    ],
+    "modules\\draw\\providers\\novelai\\floating-panel.js": [
+      "../../../../../../../extensions.js"
+    ],
+    "modules\\draw\\shared\\draw-run-controls.js": [
+      "../../../../../../extensions.js",
+      "../../../../../../../script.js"
+    ],
+    "modules\\draw\\shared\\draw-common.js": [
+      "../../../../../../extensions.js",
+      "../../../../../../../script.js"
+    ],
+    "modules\\draw\\shared\\gallery-cache.js": [
+      "../../../../../../extensions.js",
+      "../../../../../../utils.js"
+    ],
+    "modules\\draw\\shared\\card-tag-editor.js": [
+      "../../../../../../extensions.js"
+    ],
+    "modules\\draw\\shared\\prepared-chat-images.js": [
+      "../../../../../../extensions.js",
+      "../../../../../../utils.js"
+    ],
+    "modules\\draw\\shared\\image-card-actions.js": [
+      "../../../../../../extensions.js"
+    ],
+    "modules\\draw\\shared\\agent-settings-surface.js": [
+      "../../../../../../../script.js"
+    ],
+    "core\\server-storage.js": [
+      "../../../../../script.js",
+      "../../../../utils.js"
+    ],
+    "modules\\draw\\shared\\draw-agent.js": [
+      "../../../../../../../script.js"
+    ],
+    "modules\\draw\\shared\\scene-planner.js": [
+      "../../../../../../../scripts/world-info.js"
+    ],
+    "core\\after-ai-gate.js": [
+      "../../../../extensions.js"
+    ]
+  },
+  "missing": []
+}
