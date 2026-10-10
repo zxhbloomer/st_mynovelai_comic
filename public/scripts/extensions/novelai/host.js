@@ -1,6 +1,6 @@
-import { getContext } from '../../extensions.js';
-import { MEDIA_DISPLAY, MEDIA_SOURCE, MEDIA_TYPE } from '../../constants.js';
-import { getMessageTimeStamp } from '../../RossAscends-mods.js';
+import { getContext } from '/scripts/extensions.js';
+import { MEDIA_DISPLAY, MEDIA_SOURCE, MEDIA_TYPE } from '/scripts/constants.js';
+import { getMessageTimeStamp } from '/scripts/RossAscends-mods.js';
 
 export async function insertNovelAIImage({ base64, mime = 'image/png', caption = 'NovelAI image' } = {}) {
     if (!base64) throw new TypeError('NovelAI image base64 is required');
