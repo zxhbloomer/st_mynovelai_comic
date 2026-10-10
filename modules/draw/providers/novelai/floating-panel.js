@@ -584,7 +584,7 @@ function createFloorPanelElement(messageId) {
     const layerIdle = createEl('div', 'nd-layer nd-layer-idle');
     const drawBtn = createEl('button', 'nd-btn-draw');
     drawBtn.title = '点击生成配图';
-    drawBtn.appendChild(createEl('span', '', '🎨'));
+    drawBtn.appendChild(createEl('span', '', '花漫画'));
     drawBtn.appendChild(createEl('span', 'nd-auto-dot'));
     const sep = createEl('div', 'nd-sep');
     const menuBtn = createEl('button', 'nd-btn-menu');
@@ -1642,7 +1642,7 @@ function createFloatingButton() {
     const layerIdle = createEl('div', 'nd-layer nd-layer-idle');
     const drawBtn = createEl('button', 'nd-btn-draw');
     drawBtn.title = '点击为最后一条AI消息生成配图';
-    drawBtn.appendChild(createEl('span', '', '🎨'));
+    drawBtn.appendChild(createEl('span', '', '花漫画'));
     drawBtn.appendChild(createEl('span', 'nd-auto-dot'));
     const sep = createEl('div', 'nd-sep');
     const menuBtn = createEl('button', 'nd-btn-menu');
