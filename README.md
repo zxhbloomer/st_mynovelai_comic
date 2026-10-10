@@ -4,6 +4,8 @@
 
 ## 安装
 
+通过 SillyTavern 的“安装扩展”输入本仓库地址时，仓库根目录的 `manifest.json` 会让浏览器扩展被发现。该方式只安装前端扩展；若要启用服务端代理、V5 MessagePack 和后台任务，还需要按下面步骤安装服务端插件。
+
 1. 将 `server-plugin/sillytavern-novelai` 整个目录复制到 SillyTavern 的 `plugins/sillytavern-novelai`。
 2. 在 SillyTavern `config.yaml` 开启 `enableServerPlugins: true`。
 3. 将 `public/scripts/extensions/novelai` 复制到 SillyTavern 对应的 `public/scripts/extensions/novelai`。
