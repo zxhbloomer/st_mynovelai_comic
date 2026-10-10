@@ -1,4 +1,5 @@
-import { extension_settings, renderExtensionTemplateAsync, saveSettingsDebounced } from '../../../extensions.js';
+import { extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js';
+import { saveSettingsDebounced } from '../../../../script.js';
 
 const EXT_ID = 'HuaManhua';
 let settingsRoot = null;
@@ -55,4 +56,5 @@ export async function cleanup() {
 jQuery(async () => {
     await initNovelDraw();
 });
+
 
