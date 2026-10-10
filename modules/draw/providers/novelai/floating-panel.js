@@ -134,7 +134,7 @@ const STYLES = `
 }
 
 .nd-capsule {
-    width: 74px;
+    width: 92px;
     height: var(--nd-h);
     background: var(--nd-bg);
     border: 1px solid var(--nd-border);
@@ -203,7 +203,8 @@ const STYLES = `
     position: relative;
     color: var(--nd-text-primary);
     transition: background 0.15s;
-    font-size: 16px;
+    font-size: 13px;
+    white-space: nowrap;
 }
 .nd-btn-draw:hover { background: rgba(255, 255, 255, 0.12); }
 .nd-btn-draw:active { transform: scale(0.92); }
