@@ -3820,6 +3820,16 @@ export async function openNovelDrawSettings() {
     return true;
 }
 
+export async function enableNovelDrawFloatingButton() {
+    const ok = await updateSettingsPersistent((settings) => {
+        settings.showFloatingButton = true;
+    }, '悬浮按钮已启用', { silent: true });
+    if (!ok) return false;
+    const floatingPanel = await import('./floating-panel.js');
+    floatingPanel.updateButtonVisibility?.(getSettings().showFloorButton !== false, true);
+    return true;
+}
+
 export async function initNovelDraw() {
     if (window?.isXiaobaixEnabled === false) return;
     if (moduleInitialized) return true;

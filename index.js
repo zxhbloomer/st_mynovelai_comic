@@ -39,6 +39,7 @@ function setupSettings() {
             window.isXiaobaixEnabled = enabled.checked;
             if (enabled.checked) {
                 await runtime.initNovelDraw();
+                await runtime.enableNovelDrawFloatingButton?.();
                 // Keep the extension area to one enable switch while exposing
                 // the original NovelAI configuration dialog on first enable.
                 await runtime.openNovelDrawSettings?.();
