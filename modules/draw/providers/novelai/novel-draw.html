@@ -856,11 +856,13 @@ select.input { cursor: pointer; }
                         <div class="form-group">
                             <label class="form-label">采样器</label>
                             <select id="nd_sampler_sel" class="input">
-                                <option value="k_euler_ancestral">Euler Ancestral</option>
                                 <option value="k_euler">Euler</option>
-                                <option value="k_dpmpp_2m">DPM++ 2M</option>
-                                <option value="k_dpmpp_sde">DPM++ SDE</option>
                                 <option value="ddim">DDIM</option>
+                                <option value="k_dpmpp_2s_ancestral">DPM++ 2S Ancestral</option>
+                                <option value="k_dpmpp_2m">DPM++ 2M</option>
+                                <option value="k_euler_ancestral">Euler Ancestral</option>
+                                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+                                <option value="k_dpmpp_sde">DPM++ SDE</option>
                                 <option value="custom">自定义...</option>
                             </select>
                             <input id="nd_sampler" type="text" class="input hidden" style="margin-top:6px;">
@@ -897,11 +899,11 @@ select.input { cursor: pointer; }
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Steps / CFG / Seed</label>
+                            <label class="form-label">Steps / Prompt Guidance / Seed</label>
                             <div class="input-row">
                                 <input id="nd_steps" type="number" class="input" placeholder="23" title="Steps">
-                                <input id="nd_scale" type="number" class="input" placeholder="5" title="CFG">
-                                <input id="nd_seed" type="number" class="input" placeholder="-1" title="Seed">
+                                <input id="nd_scale" type="number" class="input" placeholder="5" step="0.1" title="Prompt Guidance：提示词引导强度（CFG）">
+                                <input id="nd_seed" type="number" class="input" placeholder="-1" title="Seed：随机种子，-1 为随机">
                             </div>
                         </div>
                     </div>
@@ -979,7 +981,7 @@ select.input { cursor: pointer; }
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">CFG 重缩放</label>
+                            <label class="form-label">Prompt Guidance Rescale（引导重缩放）</label>
                             <input id="nd_cfg_rescale" type="number" class="input" value="0" min="0" max="1" step="0.05">
                         </div>
                     </div>
