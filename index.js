@@ -12,7 +12,7 @@ function loadSourceModule() {
 
 async function waitForSettingsRoot() {
     for (let i = 0; i < 400; i += 1) {
-        const root = document.querySelector('#extensions_settings');
+        const root = document.querySelector('#extensions_settings2') || document.querySelector('#extensions_settings');
         if (root) return root;
         await new Promise(resolve => setTimeout(resolve, 50));
     }
@@ -64,3 +64,4 @@ export async function cleanup() {
     settingsRoot?.remove();
     settingsRoot = null;
 }
+
