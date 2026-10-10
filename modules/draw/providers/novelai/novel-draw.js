@@ -149,7 +149,7 @@ const DRAW_RUN_PROVIDER = 'novelai';
 const SERVER_FILE_KEY = 'settings';
 const HTML_PATH = `${extensionFolderPath}/modules/draw/providers/novelai/novel-draw.html`;
 // 后端发送模式走 SillyTavern server plugin 转发（需安装 plugins/sillytavern-novelai 并开启 enableServerPlugins），
-// 用于绕过浏览器 CORS / 自签证书限制。历史插件 littlewhitebox-nai 是独立 ID，这里不探测、不回退。
+// 用于绕过浏览器 CORS / 自签证书限制。历史插件 sillytavern-novelai 是独立 ID，这里不探测、不回退。
 const NAI_BACKEND_BASE = '/api/plugins/sillytavern-novelai';
 const NAI_BACKEND_GENERATE = `${NAI_BACKEND_BASE}/v1/generate-image`;
 const NAI_BACKEND_GENERATE_V2 = `${NAI_BACKEND_BASE}/v2/generate-image`;
@@ -539,7 +539,7 @@ function cancelPendingDrawRun(messageId, target) {
     if (!target.entries.length) return false;
     void cancelPendingDrawRuns(messageId, { ctx: target.ctx, target }).catch((error) => {
         console.error('[NovelDraw] 后台 Draw Run 取消失败:', error);
-        toastr.error(error?.message || '后台画图取消失败，请稍后重试', '小白X画图');
+        toastr.error(error?.message || '后台画图取消失败，请稍后重试', '花漫画画图');
     });
     return true;
 }

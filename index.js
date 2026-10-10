@@ -24,21 +24,14 @@ async function mountSettings() {
     wrapper.innerHTML = await response.text();
     host.append(wrapper);
     settingsRoot = wrapper;
-    const enabled = wrapper.querySelector('#xiaobaix_enabled');
-    if (enabled) {
-        enabled.id = 'huamanhua_enabled';
-        enabled.nextElementSibling.textContent = '花漫画：启用 / 禁用';
-        enabled.checked = extension_settings[EXT_ID].enabled === true;
-        enabled.addEventListener('change', async () => {
-            extension_settings[EXT_ID].enabled = enabled.checked;
-            saveSettingsDebounced();
-            if (enabled.checked) await initSource();
-            else await cleanupSource();
-        });
-    }
-    wrapper.querySelector('#xiaobaix_draw_provider')?.remove();
-    wrapper.querySelector('label[for="xiaobaix_draw_provider"]')?.remove();
-    wrapper.querySelector('#xiaobaix_draw_open_settings')?.remove();
+    const enabled = wrapper.querySelector('#huamanhua_enabled');
+    enabled.checked = extension_settings[EXT_ID].enabled === true;
+    enabled.addEventListener('change', async () => {
+        extension_settings[EXT_ID].enabled = enabled.checked;
+        saveSettingsDebounced();
+        if (enabled.checked) await initSource();
+        else await cleanupSource();
+    });
 }
 
 export async function initNovelDraw() {

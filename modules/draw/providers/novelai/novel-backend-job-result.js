@@ -31,7 +31,7 @@ export async function decodeNovelBackendJobResult({ response, kind }) {
     if (kind === 'msgpack-stream' && mime !== 'image/png') {
         return await rejectBackendResult(
             response,
-            'NovelAI V5 后台结果来自旧版插件。请用扩展内的 littlewhitebox-image-jobs 完整覆盖服务端插件并重启 SillyTavern。',
+            'NovelAI V5 后台结果来自旧版插件。请用扩展内的 sillytavern-novelai 完整覆盖服务端插件并重启 SillyTavern。',
             'novelai_backend_result_contract_outdated',
         );
     }
@@ -45,3 +45,4 @@ export async function decodeNovelBackendJobResult({ response, kind }) {
     const base64 = await readImageBackendResultBase64(response);
     return mime === 'image/png' ? base64 : `data:${mime};base64,${base64}`;
 }
+
