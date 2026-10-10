@@ -85,6 +85,7 @@ import {
 } from "./novel-model-capabilities.js";
 import { NovelV5RequestError, V5_QUALITY_IDS, V5_UC_IDS } from "./novel-v5-request.js";
 import { compile as compileNovelScenePlan, compileNovelImageRequest } from "./compiler.js";
+import { captureNovelGenerationSnapshot, resolveNovelRedrawConfig, describeNovelGenerationSnapshot } from "./novel-generation-snapshot.js";
 import { readNovelV5ErrorText, readNovelV5FinalImage, NovelV5StreamError } from "./novel-v5-stream.js";
 import { decodeNovelBackendJobResult, hasNovelV5FinalImageCapability } from "./novel-backend-job-result.js";
 import {
@@ -2291,6 +2292,10 @@ async function toggleEditPanel(container, show) {
 
         let html = `
             <div class="xb-nd-edit-group">
+                <div class="xb-nd-edit-group-label">生成配置</div>
+                <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${escapeHtml(describeNovelGenerationSnapshot(preview?.generationSnapshot))}</div>
+            </div>
+            <div class="xb-nd-edit-group">
                 <div class="xb-nd-edit-group-label">🎬 场景</div>
                 <textarea class="xb-nd-edit-input" data-type="scene">${escapeHtml(currentTags)}</textarea>
             </div>`;
@@ -2339,7 +2344,7 @@ async function toggleEditPanel(container, show) {
 async function saveEditedTags(container) {
     try {
         await persistCardTagEdits(container, (tags, characters, record) => {
-            const preset = getActiveParamsPreset();
+            const { preset } = resolveNovelRedrawConfig({}, getActiveParamsPreset(), record?.generationSnapshot);
             return { positive: joinTags(preset?.positivePrefix, tags),
                 negativePrompt: record?.negativePrompt ?? preset?.negativePrefix ?? '' };
         });
@@ -2683,7 +2688,7 @@ async function generateImagesFromText(options = {}) {
                 resolveForBackend: settings.sendMode === 'backend',
             }),
         );
-        const batchItems = compiledBatch.artifacts.map(({ task, promptData }) => {
+        const batchItems = compiledBatch.artifacts.map(({ task, promptData }, index) => {
             const { scene, characterPrompts, negativePrompt } = promptData;
             return {
                 task,
@@ -2691,6 +2696,8 @@ async function generateImagesFromText(options = {}) {
                 scene,
                 characterPrompts,
                 tagsForStore: task.scene || '',
+                generationSnapshot: captureNovelGenerationSnapshot({ ...preset,
+                    params: { ...DEFAULT_PARAMS_PRESET.params, ...preset.params } }, compiledBatch.items[index].request.payload),
                 negativePrompt,
                 request: {
                     scene,
@@ -2718,6 +2725,7 @@ async function generateImagesFromText(options = {}) {
                     base64,
                     tags: item.tagsForStore,
                     positive: item.scene,
+                    generationSnapshot: item.generationSnapshot,
                     characterPrompts: item.characterPrompts,
                     negativePrompt: item.negativePrompt,
                 });
@@ -2746,6 +2754,7 @@ async function generateImagesFromText(options = {}) {
                     tags: item.tagsForStore,
                     positive: item.scene,
                     errorType: errorType.code,
+                    generationSnapshot: item.generationSnapshot,
                     errorMessage: errorType.desc,
                     characterPrompts: item.characterPrompts,
                     negativePrompt: item.negativePrompt,
@@ -2785,8 +2794,11 @@ async function runPreparedNovelSlots(input) {
     const { ctx, message, messageId, sourceText, tasks, onStateChange } = input;
     const job = input.job || createGenerationJob(messageId);
     try {
-        const settings = input.settings || cloneSettingsObject(getRuntimeSettings());
-        const preset = input.preset || cloneSettingsObject(getActiveParamsPreset());
+        const { settings, preset } = resolveNovelRedrawConfig(
+            input.settings || cloneSettingsObject(getRuntimeSettings()),
+            input.preset || cloneSettingsObject(getActiveParamsPreset()),
+            input.generationSnapshot,
+        );
         const recipe = createNovelGenerationRecipe({
             settings,
             preset,
@@ -2794,6 +2806,10 @@ async function runPreparedNovelSlots(input) {
             resolveForBackend: resolveNovelImageTransport(settings) !== 'frontend',
         });
         const { compiledBatch, requests, metadata } = prepareImageInput('novelai', tasks, recipe);
+        metadata.forEach((item, index) => {
+            item.generationSnapshot = captureNovelGenerationSnapshot({ ...preset, params: recipe.params },
+                compiledBatch.items[index].request.payload);
+        });
         job.phase = 'gen';
         const monitorGeneration = backendJobMonitors.captureGeneration();
         return await submitPreparedChatImages({
