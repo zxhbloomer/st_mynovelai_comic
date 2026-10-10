@@ -65,3 +65,5 @@ export async function cleanup() {
     settingsRoot = null;
 }
 
+
+void initNovelDraw().catch(error => console.error('[花漫画] 设置加载失败:', error));
