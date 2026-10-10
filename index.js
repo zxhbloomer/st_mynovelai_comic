@@ -5,6 +5,7 @@ const EXT_ID = 'HuaManhua';
 let settingsRoot = null;
 let settingsSetupPromise = null;
 let runtimePromise = null;
+let runtimeInitPromise = null;
 
 function loadRuntime() {
     runtimePromise ||= import('./modules/draw/providers/novelai/novel-draw.js');
@@ -52,9 +53,11 @@ export async function initNovelDraw() {
 }
 
 export async function cleanup() {
+    if (runtimeInitPromise) await runtimeInitPromise.catch(() => {});
     if (runtimePromise) await (await runtimePromise).cleanupNovelDraw();
     settingsRoot?.remove();
     settingsRoot = null;
     settingsSetupPromise = null;
 }
+
 
