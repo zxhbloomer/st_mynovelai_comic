@@ -49,7 +49,7 @@ export async function initNovelDraw() {
     await setupSettings();
     window.isXiaobaixEnabled = extension_settings[EXT_ID].enabled === true;
     if (!window.isXiaobaixEnabled) return false;
-    return (await loadRuntime()).initNovelDraw();
+    if (runtimeInitPromise) return runtimeInitPromise;`n    runtimeInitPromise = loadRuntime().then(runtime => runtime.initNovelDraw());`n    try { return await runtimeInitPromise; } finally { runtimeInitPromise = null; }
 }
 
 export async function cleanup() {
@@ -59,5 +59,6 @@ export async function cleanup() {
     settingsRoot = null;
     settingsSetupPromise = null;
 }
+
 
 
