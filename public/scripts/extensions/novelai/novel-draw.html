@@ -769,14 +769,14 @@ select.input { cursor: pointer; }
                                     <button id="nd_backend_recheck" class="btn btn-sm" type="button"><i class="fa-solid fa-rotate"></i> 重新检测</button>
                                 </div>
                                 <div id="nd_backend_guide" class="nd-backend-guide hidden">
-                                    <p class="form-hint" style="margin-top:4px;">后端插件未就绪。插件文件已随 st_mynovelai_comic 一起下载，只需手动搬到酒馆的后端插件目录并重启：</p>
+                                    <p class="form-hint" style="margin-top:4px;">后端插件未就绪。插件文件已随 LittleWhiteBox 一起下载，只需手动搬到酒馆的后端插件目录并重启：</p>
                                     <ol class="nd-guide-steps">
-                                        <li>找到插件文件夹（在本扩展目录下）：<br><code>SillyTavern/plugins/sillytavern-novelai/</code></li>
-                                        <li>把整个 <code>sillytavern-novelai</code> 文件夹（包括其中的所有子目录）复制到：<br><code>SillyTavern/plugins/sillytavern-novelai/</code></li>
+                                        <li>找到插件文件夹（在本扩展目录下）：<br><code>SillyTavern/public/scripts/extensions/third-party/LittleWhiteBox/server-plugin/littlewhitebox-image-jobs/</code></li>
+                                        <li>把整个 <code>littlewhitebox-image-jobs</code> 文件夹（包括其中的所有子目录）复制到：<br><code>SillyTavern/plugins/littlewhitebox-image-jobs/</code></li>
                                         <li>用文本编辑器打开 <code>SillyTavern/config.yaml</code>，找到 <code>enableServerPlugins</code> 一行改为 <code>enableServerPlugins: true</code>（若没有这一行就新增）</li>
                                         <li>完全关闭并重启 SillyTavern，回到这里点“重新检测”</li>
                                     </ol>
-                                    <p class="form-hint" style="margin-top:6px;">装过旧的 <code>SillyTavern/plugins/sillytavern-novelai/</code> 可以顺手删掉。它是独立插件，不会冲突，但小白X已不再请求它。</p>
+                                    <p class="form-hint" style="margin-top:6px;">装过旧的 <code>SillyTavern/plugins/littlewhitebox-nai/</code> 可以顺手删掉。它是独立插件，不会冲突，但小白X已不再请求它。</p>
                                 </div>
                             </div>
                         </div>
@@ -1656,13 +1656,13 @@ function renderBackendPluginStatus() {
     const isV5 = getModelCapability(model).family === 'v5';
     const capabilities = Array.isArray(st.capabilities) ? st.capabilities : [];
     const usesBackgroundJobs = getSendMode() === 'backend' && $('nd_use_backend_jobs')?.checked === true;
-    const supportsBackgroundJobs = isVersionAtLeast(st.version, '1.0.0')
+    const supportsBackgroundJobs = isVersionAtLeast(st.version, '2.3.0')
         && capabilities.includes('image-batch-jobs-v1')
         && capabilities.includes('draw-runs-v1')
         && capabilities.includes('draw-run-runtime-v4')
         && (!isV5 || capabilities.includes('novelai-v5-final-image-v1'));
     if (usesBackgroundJobs && !supportsBackgroundJobs) {
-        setBackendStatusUI('bad', `花漫画后台任务需要后端插件 v1.0.0+（当前 v${st.version || '未知'}），请完整覆盖插件并重启 SillyTavern`);
+        setBackendStatusUI('bad', `小白X后台任务需要后端插件 v2.3.0+（当前 v${st.version || '未知'}），请完整覆盖插件并重启 SillyTavern`);
         return;
     }
     const supportsV5 = isVersionAtLeast(st.version, '1.2.0')
@@ -2942,7 +2942,7 @@ function collectParamsPreset() {
 window.addEventListener('message', event => {
     if (event.origin !== PARENT_ORIGIN || event.source !== window.parent) return;
     const data = event.data;
-    if (!data || data.source !== 'ST-NovelAI') return;
+    if (!data || data.source !== 'LittleWhiteBox-NovelDraw') return;
 
     switch (data.type) {
         case 'INIT_DATA':
@@ -3667,4 +3667,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-

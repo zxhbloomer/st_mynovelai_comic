@@ -148,9 +148,9 @@ const MODULE_KEY = 'novelDraw';
 const DRAW_RUN_PROVIDER = 'novelai';
 const SERVER_FILE_KEY = 'settings';
 const HTML_PATH = `${extensionFolderPath}/modules/draw/providers/novelai/novel-draw.html`;
-// 后端发送模式走 SillyTavern server plugin 转发（需安装 plugins/sillytavern-novelai 并开启 enableServerPlugins），
-// 用于绕过浏览器 CORS / 自签证书限制。历史插件 st-novelai-legacy 是独立 ID，这里不探测、不回退。
-const NAI_BACKEND_BASE = '/api/plugins/sillytavern-novelai';
+// 后端发送模式走 SillyTavern server plugin 转发（需安装 plugins/littlewhitebox-image-jobs 并开启 enableServerPlugins），
+// 用于绕过浏览器 CORS / 自签证书限制。历史插件 littlewhitebox-nai 是独立 ID，这里不探测、不回退。
+const NAI_BACKEND_BASE = '/api/plugins/littlewhitebox-image-jobs';
 const NAI_BACKEND_GENERATE = `${NAI_BACKEND_BASE}/v1/generate-image`;
 const NAI_BACKEND_GENERATE_V2 = `${NAI_BACKEND_BASE}/v2/generate-image`;
 const NAI_BACKEND_GENERATE_STREAM = `${NAI_BACKEND_BASE}/v1/generate-image-stream`;
@@ -250,14 +250,14 @@ async function assertV5BackendCapability(signal) {
                 ? `版本过旧（当前 v${status.version || '未知'}）`
                 : '未就绪';
         throw new NovelDrawError(
-            `NovelAI V5 后端插件${reason}，请安装当前 sillytavern-novelai（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
+            `NovelAI V5 后端插件${reason}，请安装当前 littlewhitebox-image-jobs（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
             ErrorType.NETWORK,
         );
     }
     if (!isVersionAtLeast(status.version, NAI_BACKEND_V5_MIN_VERSION)
         || !status.capabilities?.includes('v5-msgpack-stream')) {
         throw new NovelDrawError(
-            `当前后端插件不支持 NovelAI V5 流协议，请安装当前 sillytavern-novelai（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
+            `当前后端插件不支持 NovelAI V5 流协议，请安装当前 littlewhitebox-image-jobs（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
             ErrorType.NETWORK,
         );
     }
@@ -1403,10 +1403,10 @@ async function generateViaBackend({ url, legacyBaseUrl, apiKey, insecure, payloa
         }
     } catch (e) {
         if (e?.name === 'AbortError') throw e;
-        throw new NovelDrawError('后端代发失败（未安装 sillytavern-novelai 插件或 SillyTavern 未开启 server plugins）', ErrorType.NETWORK);
+        throw new NovelDrawError('后端代发失败（未安装 littlewhitebox-image-jobs 插件或 SillyTavern 未开启 server plugins）', ErrorType.NETWORK);
     }
     if (res.status === 404) {
-        throw imageHttpFailure(new NovelDrawError('后端端点不存在：请安装 plugins/sillytavern-novelai 并在 config.yaml 开启 enableServerPlugins 后重启酒馆', ErrorType.NETWORK), 404);
+        throw imageHttpFailure(new NovelDrawError('后端端点不存在：请安装 plugins/littlewhitebox-image-jobs 并在 config.yaml 开启 enableServerPlugins 后重启酒馆', ErrorType.NETWORK), 404);
     }
     if (!res.ok) {
         throw parseApiError(res.status, await res.text().catch(() => ''));
@@ -1441,11 +1441,11 @@ async function generateV5ViaBackend({ url, apiKey, insecure, payload, signal, ti
         });
     } catch (error) {
         if (error?.name === 'AbortError') throw error;
-        throw new NovelDrawError('V5 后端代发失败，请检查 sillytavern-novelai 插件', ErrorType.NETWORK);
+        throw new NovelDrawError('V5 后端代发失败，请检查 littlewhitebox-image-jobs 插件', ErrorType.NETWORK);
     }
     if (response.status === 404) {
         throw imageHttpFailure(new NovelDrawError(
-            `V5 后端端点不存在：请安装当前 sillytavern-novelai（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
+            `V5 后端端点不存在：请安装当前 littlewhitebox-image-jobs（兼容后端最低 v${NAI_BACKEND_V5_MIN_VERSION}）`,
             ErrorType.NETWORK,
         ), 404);
     }
@@ -1515,7 +1515,7 @@ async function testApiConnection(apiKey, baseUrl, opts = {}) {
                 await res.body?.cancel?.().catch(() => {});
                 res = await request(NAI_BACKEND_TEST);
             }
-            if (res.status === 404) throw new NovelDrawError('后端端点不存在：请安装 plugins/sillytavern-novelai 并开启 enableServerPlugins 后重启酒馆', ErrorType.NETWORK);
+            if (res.status === 404) throw new NovelDrawError('后端端点不存在：请安装 plugins/littlewhitebox-image-jobs 并开启 enableServerPlugins 后重启酒馆', ErrorType.NETWORK);
             const data = await res.json().catch(() => null);
             if (data?.ok === true) return { success: true };
             if (data?.status === 401) throw new NovelDrawError('API Key 无效', ErrorType.AUTH);
@@ -1781,14 +1781,14 @@ async function runNovelImageBatch({
             if (!hasImageBackendJobsCapability(backendStatus)) {
                 detachScope.dispose();
                 throw new NovelDrawError(
-                    '小白X后台批量任务不可用。请安装并启动当前 sillytavern-novelai，或关闭此选项后继续使用逐张后端发送。',
+                    '小白X后台批量任务不可用。请安装并启动当前 littlewhitebox-image-jobs，或关闭此选项后继续使用逐张后端发送。',
                     ErrorType.NETWORK,
                 );
             }
             if (prepared.some(item => item.isV5) && !hasNovelV5FinalImageCapability(backendStatus)) {
                 detachScope.dispose();
                 throw new NovelDrawError(
-                    '当前后端插件仍会把 NovelAI V5 原始流交给浏览器。请安装并启动当前 sillytavern-novelai，或关闭“小白X后台任务”。',
+                    '当前后端插件仍会把 NovelAI V5 原始流交给浏览器。请安装并启动当前 littlewhitebox-image-jobs，或关闭“小白X后台任务”。',
                     ErrorType.NETWORK,
                 );
             }
@@ -3106,7 +3106,7 @@ async function sendInitData() {
         cacheStats: stats,
         gallerySummary,
     });
-    postToIframe(iframe, buildPayload(), 'ST-NovelAI');
+    postToIframe(iframe, buildPayload(), 'LittleWhiteBox-NovelDraw');
 
     let stats = { count: 0, sizeMB: 0 };
     let gallerySummary = {};
@@ -3118,13 +3118,13 @@ async function sendInitData() {
             type: 'CACHE_DATA',
             cacheStats: stats,
             gallerySummary,
-        }, 'ST-NovelAI');
+        }, 'LittleWhiteBox-NovelDraw');
     }
 }
 
 function postStatus(state, text, target = '') {
     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-    if (iframe) postToIframe(iframe, { type: 'STATUS', state, text, target }, 'ST-NovelAI');
+    if (iframe) postToIframe(iframe, { type: 'STATUS', state, text, target }, 'LittleWhiteBox-NovelDraw');
 }
 
 function getAgentSettingsSurfaceRoot() {
@@ -3283,7 +3283,7 @@ async function handleFrameMessage(event) {
         case 'CHECK_BACKEND_PLUGIN': {
             const status = await checkBackendPluginStatus();
             const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-            if (iframe) postToIframe(iframe, { type: 'BACKEND_PLUGIN_STATUS', status }, 'ST-NovelAI');
+            if (iframe) postToIframe(iframe, { type: 'BACKEND_PLUGIN_STATUS', status }, 'LittleWhiteBox-NovelDraw');
             break;
         }
 
@@ -3611,7 +3611,7 @@ async function handleFrameMessage(event) {
                 query: data.query,
                 charId: data.charId,
                 results,
-            }, 'ST-NovelAI');
+            }, 'LittleWhiteBox-NovelDraw');
             break;
         }
 
@@ -3641,7 +3641,7 @@ async function handleFrameMessage(event) {
             postToIframe(iframe, {
                 type: 'SYNC_SUMMARY_FILTER_RESULT',
                 rules: Array.isArray(summaryRules) ? summaryRules : [],
-            }, 'ST-NovelAI');
+            }, 'LittleWhiteBox-NovelDraw');
             break;
         }
 
@@ -3670,7 +3670,7 @@ async function handleFrameMessage(event) {
                 type: 'PROMPT_CHAIN_DATA',
                 requestId: data.requestId,
                 chain: getPromptChainPreview(promptDraft, model),
-            }, 'ST-NovelAI');
+            }, 'LittleWhiteBox-NovelDraw');
             break;
         }
 
@@ -3679,7 +3679,7 @@ async function handleFrameMessage(event) {
                 postToIframe(iframe, {
                     type: 'LAST_LLM_REQUEST_DATA',
                     snapshot: getLastDrawAgentDiagnostic(),
-                }, 'ST-NovelAI');
+                }, 'LittleWhiteBox-NovelDraw');
             }
             break;
         }
@@ -3708,7 +3708,7 @@ async function handleFrameMessage(event) {
                 if (Number.isFinite(preview.messageId)) await syncNovelDrawSavedFromPreview(preview.messageId, preview, { savedUrl: url });
                 {
                     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-                    if (iframe) postToIframe(iframe, { type: 'GALLERY_IMAGE_SAVED', imgId: data.imgId, savedUrl: url }, 'ST-NovelAI');
+                    if (iframe) postToIframe(iframe, { type: 'GALLERY_IMAGE_SAVED', imgId: data.imgId, savedUrl: url }, 'LittleWhiteBox-NovelDraw');
                 }
                 sendInitData();
                 showToast(`已保存: ${url}`, 'success', 5000);
@@ -3726,7 +3726,7 @@ async function handleFrameMessage(event) {
                 const slots = await getCharacterPreviews(charName);
                 {
                     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-                    if (iframe) postToIframe(iframe, { type: 'CHARACTER_PREVIEWS_LOADED', charName, slots }, 'ST-NovelAI');
+                    if (iframe) postToIframe(iframe, { type: 'CHARACTER_PREVIEWS_LOADED', charName, slots }, 'LittleWhiteBox-NovelDraw');
                 }
             } catch (e) {
                 console.error('[NovelDraw] 加载预览失败:', e);
@@ -3739,7 +3739,7 @@ async function handleFrameMessage(event) {
                 await deletePreview(data.imgId);
                 {
                     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-                    if (iframe) postToIframe(iframe, { type: 'GALLERY_IMAGE_DELETED', imgId: data.imgId }, 'ST-NovelAI');
+                    if (iframe) postToIframe(iframe, { type: 'GALLERY_IMAGE_DELETED', imgId: data.imgId }, 'LittleWhiteBox-NovelDraw');
                 }
                 sendInitData();
                 showToast('已删除');
@@ -3794,7 +3794,7 @@ async function handleFrameMessage(event) {
                 const base64 = await generateNovelImage({ scene, characterPrompts: [], negativePrompt: preset?.negativePrefix || '', params: preset?.params || {} });
                 {
                     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
-                    if (iframe) postToIframe(iframe, { type: 'TEST_RESULT', url: getPreviewDisplayUrl({ base64 }) }, 'ST-NovelAI');
+                    if (iframe) postToIframe(iframe, { type: 'TEST_RESULT', url: getPreviewDisplayUrl({ base64 }) }, 'LittleWhiteBox-NovelDraw');
                 }
                 postStatus('success', `完成 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
             } catch (e) {
@@ -4066,4 +4066,3 @@ export {
     abortGeneration,
     isGenerating,
 };
-

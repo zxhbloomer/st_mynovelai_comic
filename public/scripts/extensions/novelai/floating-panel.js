@@ -1,4 +1,4 @@
-// floating-panel.js
+﻿// floating-panel.js
 /**
  * NovelDraw 画图按钮面板 - 支持楼层按钮和悬浮按钮双模式
  */
