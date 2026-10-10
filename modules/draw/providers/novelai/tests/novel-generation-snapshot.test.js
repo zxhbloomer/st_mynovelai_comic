@@ -50,15 +50,21 @@ test('the real compiler redraws edited prompts with the original effective param
 test('pending, delivered and recoverable records retain each image configuration', async () => {
     const snapshot = { version: 1, provider: 'novelai', presetName: '原预设', params: { width: 832 } };
     const stored = [];
-    await executePreparedSlots({ items: [{ slotId: 'slot', imgId: 'image', generationSnapshot: snapshot }],
+    await executePreparedSlots({ items: [{ slotId: 'slot', imgId: 'image', generationSnapshot: snapshot,
+        plannerSourceText: '原始描述', plannerSourceOrigin: 'captured' }],
         backend: true, commit: async () => true, resolveTarget: async () => ({ messageId: 1 }),
         store: async record => stored.push(record), remove: async () => {}, select: async () => {},
         activity: () => {}, render: async () => {}, classifyError: () => ({}),
         run: async handlers => {
             assert.deepEqual(handlers.recoverable.plan.items[0].previewMetadata.generationSnapshot, snapshot);
+            assert.equal(handlers.recoverable.plan.items[0].previewMetadata.plannerSourceText, '原始描述');
             await handlers.recoverable.commitPlacements();
             await handlers.onItemReady({ index: 0, base64: 'image' });
         } });
     assert.ok(stored.length >= 2);
-    for (const record of stored) assert.deepEqual(record.generationSnapshot, snapshot);
+    for (const record of stored) {
+        assert.deepEqual(record.generationSnapshot, snapshot);
+        assert.equal(record.plannerSourceText, '原始描述');
+        assert.equal(record.plannerSourceOrigin, 'captured');
+    }
 });

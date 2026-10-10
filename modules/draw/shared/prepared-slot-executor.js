@@ -95,7 +95,9 @@ export async function executePreparedSlots({ items, backend, store, remove, sele
                     items: items.map((item, index) => ({ index, slotId: item.slotId, imgId: item.imgId, discarded: item.discarded,
                         previewMetadata: { tags: item.tags, positive: item.positive,
                             characterPrompts: item.characterPrompts, negativePrompt: item.negativePrompt,
-                            generationSnapshot: item.generationSnapshot } })),
+                            generationSnapshot: item.generationSnapshot,
+                            plannerSourceText: item.plannerSourceText,
+                            plannerSourceOrigin: item.plannerSourceOrigin } })),
                 },
                 commitPlacements: async () => {
                     // Deletion may precede journal creation while this batch waits

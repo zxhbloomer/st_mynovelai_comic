@@ -93,13 +93,15 @@ function mergeSecrets(...groups) {
     return new Set(groups.flatMap(group => [...(group || [])]));
 }
 
-function buildDisplayMetadata(artifact = {}) {
+function buildDisplayMetadata(artifact = {}, plannerSourceText = null) {
     const promptData = artifact.promptData || {};
     const metadata = {
         tags: String(artifact.tags || artifact.task?.scene || ''),
         positive: String(promptData.positive || promptData.scene || ''),
         characterPrompts: cloneJson(promptData.characterPrompts || []),
         negativePrompt: String(promptData.negative || promptData.negativePrompt || ''),
+        plannerSourceText,
+        plannerSourceOrigin: plannerSourceText === null ? null : 'captured',
     };
     if (artifact.providerMetadata && typeof artifact.providerMetadata === 'object') {
         metadata.providerMetadata = cloneJson(artifact.providerMetadata);
@@ -382,6 +384,8 @@ class DrawRunManager {
 
         try {
             const scenePoints = run.plannerInput.planner.validationContext.sceneSource.points;
+            const plannerSourceText = run.provider === 'novelai'
+                ? run.plannerInput.planner.validationContext.sceneSource.sourceText ?? null : null;
             const scenePlan = await this.runtime.executePreparedScenePlanner(run.plannerInput, {
                 timeout: run.plannerInput.agent.providerConfig.timeoutMs,
                 signal: controller.signal,
@@ -425,7 +429,7 @@ class DrawRunManager {
                     index,
                     ...ids,
                     insertOffset: point.offset,
-                    displayMetadata: buildDisplayMetadata(artifact),
+                    displayMetadata: buildDisplayMetadata(artifact, plannerSourceText),
                 };
             });
             this.imageJobService.create(run.owner, {

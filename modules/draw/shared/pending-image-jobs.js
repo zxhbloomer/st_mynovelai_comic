@@ -172,6 +172,8 @@ function normalizeItem(source) {
             characterPrompts: metadata.characterPrompts ?? null,
             negativePrompt: metadata.negativePrompt ?? null,
             generationSnapshot: metadata.generationSnapshot ?? null,
+            plannerSourceText: typeof metadata.plannerSourceText === 'string' ? metadata.plannerSourceText : null,
+            plannerSourceOrigin: metadata.plannerSourceOrigin ?? null,
             providerMetadata,
         },
     };

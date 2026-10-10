@@ -501,6 +501,8 @@ export async function exportPortablePreviewsForSlots(slotIds = []) {
             characterPrompts: preview.characterPrompts || null,
             negativePrompt: preview.negativePrompt || null,
             generationSnapshot: preview.generationSnapshot || null,
+            plannerSourceText: preview.plannerSourceText ?? null,
+            plannerSourceOrigin: preview.plannerSourceOrigin ?? null,
             timestamp: Number(preview.timestamp) || Date.now(),
         });
         selections.push({ slotId, selectedImgId: imgId });
@@ -599,6 +601,8 @@ export async function storePreview(opts) {
         characterPrompts = null,
         negativePrompt = null,
         generationSnapshot = null,
+        plannerSourceText = null,
+        plannerSourceOrigin = null,
         source = '',
         chatId = '',
         characterName = '',
@@ -637,6 +641,8 @@ export async function storePreview(opts) {
                 characterPrompts,
                 negativePrompt,
                 generationSnapshot,
+                plannerSourceText,
+                plannerSourceOrigin,
                 timestamp: Date.now()
             });
             tx.oncomplete = () => {
@@ -672,6 +678,8 @@ export async function storeFailedPlaceholder(opts) {
         characterPrompts: opts.characterPrompts ?? null,
         negativePrompt: opts.negativePrompt ?? null,
         generationSnapshot: opts.generationSnapshot ?? null,
+        plannerSourceText: opts.plannerSourceText ?? null,
+        plannerSourceOrigin: opts.plannerSourceOrigin ?? null,
     });
 }
 

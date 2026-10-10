@@ -86,6 +86,7 @@ import {
 import { NovelV5RequestError, V5_QUALITY_IDS, V5_UC_IDS } from "./novel-v5-request.js";
 import { compile as compileNovelScenePlan, compileNovelImageRequest } from "./compiler.js";
 import { captureNovelGenerationSnapshot, resolveNovelRedrawConfig, describeNovelGenerationSnapshot } from "./novel-generation-snapshot.js";
+import { resolveCardPlannerSource, reparseNovelCardPrompt } from "./novel-card-reparse.js";
 import { readNovelV5ErrorText, readNovelV5FinalImage, NovelV5StreamError } from "./novel-v5-stream.js";
 import { decodeNovelBackendJobResult, hasNovelV5FinalImageCapability } from "./novel-backend-job-result.js";
 import {
@@ -132,7 +133,7 @@ import {
 import { replaceSceneSlotElements } from "../../shared/scene-slot-dom.js";
 import { createSceneSource, normalizeMessageSceneSourceText } from "../../shared/scene-source.js";
 import { createDrawImageSlotRegex, stripDrawImageSlots } from "../../shared/image-marker-syntax.js";
-import { ScenePlacementError, assertSceneSourceUnchanged } from "../../shared/scene-placement.js";
+import { ScenePlacementError, assertSceneSourceUnchanged, isSceneSlotAlive } from "../../shared/scene-placement.js";
 import { submitPreparedChatImages, registerPreparedImageProvider } from "../../shared/prepared-chat-images.js";
 import { prepareImageInput } from '../../shared/prepared-image-input.js';
 import { acquireFloorImageJob, getFloorImageJob, getFloorImageJobs, getFloorImagePhase, getFloorImageState, releaseFloorImageJob, observeFloorImageJob, failFloorImageJob, clearFloorImageJobs, resolveFloorImageJobTarget, rebaseFloorImageJobsAfterSwipeDeletion } from '../../shared/floor-image-job.js';
@@ -2154,6 +2155,9 @@ async function handleDelegatedClick(e) {
         case 'save-tags':
             await saveEditedTags(container);
             break;
+        case 'reparse-tags':
+            await reparseEditedDescription(container);
+            break;
         case 'cancel-edit':
             toggleEditPanel(container, false);
             break;
@@ -2265,6 +2269,19 @@ async function handleImageClick(container) {
     });
 }
 
+const cardEditDrafts = new WeakMap();
+const cardParseControllers = new Set();
+
+function renderCardTagFields(tags, characters = []) {
+    return `<div class="xb-nd-edit-group">
+        <div class="xb-nd-edit-group-label">🎬 场景</div>
+        <textarea class="xb-nd-edit-input" data-type="scene">${escapeHtml(tags)}</textarea>
+    </div>` + characters.map((character, index) => `<div class="xb-nd-edit-group">
+        <div class="xb-nd-edit-group-label">👤 ${escapeHtml(character.name || `角色 ${index + 1}`)}</div>
+        <textarea class="xb-nd-edit-input" data-type="char" data-index="${index}">${escapeHtml(character.prompt || '')}</textarea>
+    </div>`).join('');
+}
+
 async function toggleEditPanel(container, show) {
     const editPanel = container.querySelector('.xb-nd-edit');
     const btnsPanel = container.querySelector('.xb-nd-btns') || container.querySelector('.xb-nd-failed-btns');
@@ -2279,6 +2296,10 @@ async function toggleEditPanel(container, show) {
     if (show) {
         const preview = await getCardPreview({ imgId: container.dataset.imgId, slotId: container.dataset.slotId });
         const currentTags = preview?.tags ?? container.dataset.tags ?? '';
+        const message = getContext().chat?.[Number(container.dataset.mesid)];
+        const source = resolveCardPlannerSource(preview, normalizeMessageSceneSourceText(message?.mes || ''));
+        cardEditDrafts.get(container)?.controller?.abort();
+        cardEditDrafts.set(container, { source, parsedSourceText: source.text });
 
         if (origLabel) origLabel.style.display = 'none';
         if (origTextarea) origTextarea.style.display = 'none';
@@ -2290,30 +2311,32 @@ async function toggleEditPanel(container, show) {
             editPanel.insertBefore(scrollWrap, editPanel.firstChild);
         }
 
-        let html = `
+        const html = `
             <div class="xb-nd-edit-group">
                 <div class="xb-nd-edit-group-label">生成配置</div>
                 <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${escapeHtml(describeNovelGenerationSnapshot(preview?.generationSnapshot))}</div>
             </div>
             <div class="xb-nd-edit-group">
-                <div class="xb-nd-edit-group-label">🎬 场景</div>
-                <textarea class="xb-nd-edit-input" data-type="scene">${escapeHtml(currentTags)}</textarea>
-            </div>`;
-
-        if (preview?.characterPrompts?.length > 0) {
-            preview.characterPrompts.forEach((char, i) => {
-                const name = char.name || `角色 ${i + 1}`;
-                html += `
-                <div class="xb-nd-edit-group">
-                    <div class="xb-nd-edit-group-label">👤 ${escapeHtml(name)}</div>
-                    <textarea class="xb-nd-edit-input" data-type="char" data-index="${i}">${escapeHtml(char.prompt || '')}</textarea>
-                </div>`;
-            });
-        }
+                <div class="xb-nd-edit-group-label">原始描述（供大模型解析）</div>
+                <div class="xb-nd-edit-group-label" data-source-note>${source.origin === 'current-message'
+                    ? '旧图未保存原始描述，以下读取当前楼层正文。' : '已保存的解析正文；系统规则、世界书等仍使用当前解析设置。'}</div>
+                <textarea class="xb-nd-edit-input" data-type="source">${escapeHtml(source.text)}</textarea>
+                <button type="button" class="menu_button" data-action="reparse-tags">重新解析 TAG</button>
+                <span class="xb-nd-edit-group-label" data-parse-status role="status"></span>
+            </div>
+            <div data-tag-fields>${renderCardTagFields(currentTags, preview?.characterPrompts || [])}</div>`;
 
         // Escaped data used in template.
         // eslint-disable-next-line no-unsanitized/property
         scrollWrap.innerHTML = html;
+        if (!editPanel.querySelector('[data-action="save-tags-retry"]')) {
+            const redrawButton = document.createElement('button');
+            redrawButton.type = 'button';
+            redrawButton.dataset.action = 'save-tags-retry';
+            redrawButton.dataset.novelRedrawButton = '';
+            redrawButton.textContent = '保存并生图';
+            editPanel.querySelector('.xb-nd-edit-actions')?.append(redrawButton);
+        }
         editPanel.style.display = 'block';
 
         if (btnsPanel) {
@@ -2321,9 +2344,12 @@ async function toggleEditPanel(container, show) {
             btnsPanel.style.pointerEvents = 'none';
         }
 
-        scrollWrap.querySelector('[data-type="scene"]')?.focus();
+        scrollWrap.querySelector('[data-type="source"]')?.focus();
 
     } else {
+        cardEditDrafts.get(container)?.controller?.abort();
+        cardEditDrafts.delete(container);
+        editPanel.querySelector('[data-novel-redraw-button]')?.remove();
         const scrollWrap = editPanel.querySelector('.xb-nd-edit-scroll');
         if (scrollWrap) scrollWrap.remove();
 
@@ -2341,12 +2367,80 @@ async function toggleEditPanel(container, show) {
     }
 }
 
+async function reparseEditedDescription(container) {
+    const draft = cardEditDrafts.get(container);
+    if (!draft || draft.controller) return;
+    const panel = container.querySelector('.xb-nd-edit');
+    const sourceInput = panel.querySelector('[data-type="source"]');
+    const status = panel.querySelector('[data-parse-status]');
+    const buttons = panel.querySelectorAll('[data-action="reparse-tags"], [data-action="save-tags"], [data-action="save-tags-retry"]');
+    const ctx = getContext();
+    const messageId = Number(container.dataset.mesid);
+    const message = ctx.chat?.[messageId];
+    const chatId = String(ctx.chatId);
+    const messageText = message?.mes;
+    const swipeIndex = message?.swipe_id ?? 0;
+    const imgId = container.dataset.imgId;
+    const controller = new AbortController();
+    draft.controller = controller;
+    cardParseControllers.add(controller);
+    sourceInput.disabled = true;
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = '正在调用大模型解析…';
+    try {
+        await loadSettings();
+        await loadSharedDrawSettings();
+        const record = await getCardPreview({ imgId, slotId: container.dataset.slotId });
+        const { settings, preset } = resolveNovelRedrawConfig(cloneSettingsObject(getRuntimeSettings()),
+            cloneSettingsObject(getActiveParamsPreset()), record?.generationSnapshot);
+        const result = await reparseNovelCardPrompt({ text: sourceInput.value, settings, preset,
+            signal: controller.signal,
+            parse: options => buildTextSourceTasks({ ...options, useWorldbook: true,
+                presentCharacters: detectPresentCharacters(options.sceneSource.content, settings.characterTags || []) }),
+        });
+        if (cardEditDrafts.get(container) !== draft || !container.isConnected
+            || String(getContext().chatId) !== chatId || getContext().chat?.[messageId] !== message
+            || message?.mes !== messageText || (message?.swipe_id ?? 0) !== swipeIndex
+            || container.dataset.imgId !== imgId || !isSceneSlotAlive(message?.mes, container.dataset.slotId)) {
+            throw new Error('图片或聊天已变化，未应用解析结果');
+        }
+        draft.parsed = result;
+        draft.parsedSourceText = sourceInput.value;
+        // All field values are escaped before rendering.
+        // eslint-disable-next-line no-unsanitized/property
+        panel.querySelector('[data-tag-fields]').innerHTML = renderCardTagFields(result.tags, result.characterPrompts);
+        status.textContent = '解析完成，请确认 TAG 后保存或重绘。';
+    } catch (error) {
+        if (!controller.signal.aborted) {
+            status.textContent = `解析失败：${error.message}`;
+            showToast(error.message, 'error');
+        }
+    } finally {
+        cardParseControllers.delete(controller);
+        draft.controller = null;
+        sourceInput.disabled = false;
+        buttons.forEach(button => { button.disabled = false; });
+    }
+}
+
 async function saveEditedTags(container) {
     try {
+        const draft = cardEditDrafts.get(container);
+        const sourceText = container.querySelector('[data-type="source"]')?.value;
+        if (draft?.controller) throw new Error('请等待 TAG 解析完成');
+        if (draft && sourceText !== draft.parsedSourceText) throw new Error('原始描述已修改，请先重新解析 TAG');
         await persistCardTagEdits(container, (tags, characters, record) => {
             const { preset } = resolveNovelRedrawConfig({}, getActiveParamsPreset(), record?.generationSnapshot);
+            const parsed = draft?.parsed;
+            const editedCharacters = (parsed?.characterPrompts || characters).map((character, index) => ({
+                ...character,
+                prompt: container.querySelector(`textarea[data-type="char"][data-index="${index}"]`)?.value.trim() ?? character.prompt,
+            }));
             return { positive: joinTags(preset?.positivePrefix, tags),
-                negativePrompt: record?.negativePrompt ?? preset?.negativePrefix ?? '' };
+                characterPrompts: editedCharacters,
+                ...(draft ? { plannerSourceText: sourceText,
+                    plannerSourceOrigin: parsed?.plannerSourceOrigin || draft.source.origin } : {}),
+                negativePrompt: parsed?.negativePrompt ?? record?.negativePrompt ?? preset?.negativePrefix ?? '' };
         });
         toggleEditPanel(container, false);
         showToast(DRAW_SLOT_COPY.tagSaved);
@@ -2726,6 +2820,8 @@ async function generateImagesFromText(options = {}) {
                     tags: item.tagsForStore,
                     positive: item.scene,
                     generationSnapshot: item.generationSnapshot,
+                    plannerSourceText: text,
+                    plannerSourceOrigin: 'captured',
                     characterPrompts: item.characterPrompts,
                     negativePrompt: item.negativePrompt,
                 });
@@ -2755,6 +2851,8 @@ async function generateImagesFromText(options = {}) {
                     positive: item.scene,
                     errorType: errorType.code,
                     generationSnapshot: item.generationSnapshot,
+                    plannerSourceText: text,
+                    plannerSourceOrigin: 'captured',
                     errorMessage: errorType.desc,
                     characterPrompts: item.characterPrompts,
                     negativePrompt: item.negativePrompt,
@@ -2809,6 +2907,8 @@ async function runPreparedNovelSlots(input) {
         metadata.forEach((item, index) => {
             item.generationSnapshot = captureNovelGenerationSnapshot({ ...preset, params: recipe.params },
                 compiledBatch.items[index].request.payload);
+            item.plannerSourceText = input.plannerSourceText ?? null;
+            item.plannerSourceOrigin = input.plannerSourceOrigin ?? null;
         });
         job.phase = 'gen';
         const monitorGeneration = backendJobMonitors.captureGeneration();
@@ -2923,7 +3023,8 @@ async function generateAndInsertImages({
 
         assertSceneSourceUnchanged(normalizeMessageSceneSourceText(message.mes), sceneSource.sourceHash);
         return await runPreparedNovelSlots({ ctx, message, messageId, sourceText: message.mes,
-            tasks, settings, preset, job, onStateChange });
+            tasks, settings, preset, job, onStateChange,
+            plannerSourceText: sceneSource.sourceText, plannerSourceOrigin: 'captured' });
     } catch (error) {
         failFloorImageJob(job, error);
         throw error;
@@ -4020,6 +4121,8 @@ export async function initNovelDraw() {
 }
 
 export async function cleanupNovelDraw() {
+    for (const controller of cardParseControllers) controller.abort();
+    cardParseControllers.clear();
     preparedImageDispose?.();
     preparedImageDispose = null;
     const cleanupGeneration = ++moduleLifecycleGeneration;
