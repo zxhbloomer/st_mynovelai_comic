@@ -868,7 +868,7 @@ select.input { cursor: pointer; }
                             <input id="nd_sampler" type="text" class="input hidden" style="margin-top:6px;">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">调度器</label>
+                            <label class="form-label">噪点表</label>
                             <select id="nd_scheduler_sel" class="input">
                                 <option value="native">Native</option>
                                 <option value="karras">Karras</option>
@@ -899,12 +899,16 @@ select.input { cursor: pointer; }
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Steps / Prompt Guidance / Seed</label>
-                            <div class="input-row">
-                                <input id="nd_steps" type="number" class="input" placeholder="23" title="Steps">
-                                <input id="nd_scale" type="number" class="input" placeholder="5" step="0.1" title="Prompt Guidance：提示词引导强度（CFG）">
-                                <input id="nd_seed" type="number" class="input" placeholder="-1" title="Seed：随机种子，-1 为随机">
-                            </div>
+                            <label class="form-label">生成步数 (Steps)</label>
+                            <input id="nd_steps" type="number" class="input" placeholder="23" title="Steps：采样步数">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prompt Guidance</label>
+                            <input id="nd_scale" type="number" class="input" placeholder="5" step="0.1" title="Prompt Guidance：提示词引导强度（CFG）">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Seed</label>
+                            <input id="nd_seed" type="number" class="input" placeholder="-1" title="Seed：随机种子，-1 为随机">
                         </div>
                     </div>
                 </div>
