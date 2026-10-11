@@ -1,6 +1,6 @@
 {
     "name": "st-mynovelai-comic",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "private": true,
     "description": "花漫画：独立的 SillyTavern NovelAI 扩展与服务端插件。",
     "type": "module",

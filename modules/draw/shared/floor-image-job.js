@@ -98,10 +98,11 @@ export function observeFloorImageJob(job, { getCurrentContext, onStateChange, cl
     }
     publish(job);
     const update = (state, data = {}) => {
-        if (job.state !== state || data.current !== job.current) appendDrawLog('图片任务 · 状态', {
+        if (job.state !== state || data.current !== job.current || data.error || data.errorMessage) appendDrawLog('图片任务 · 状态', {
             messageId: job.messageId, state, runId: data.runId, current: data.current,
-            total: data.total, success: data.success, label: data.label,
-        });
+            total: data.total, success: data.success, label: data.label, phase: data.phase,
+            error: data.error, errorMessage: data.errorMessage, failures: data.failures,
+        }, state === 'error' || data.error || data.errorMessage || data.failures?.length ? 'error' : 'info');
         if (data.runId && !job.runId) {
             job.runId = data.runId;
             job.unsubscribe = subscribeDrawRunActivity(detail => {
@@ -135,7 +136,7 @@ export function observeFloorImageJob(job, { getCurrentContext, onStateChange, cl
 
 export function failFloorImageJob(job, error) {
     appendDrawLog('图片任务 · 失败或取消', { messageId: job.messageId, runId: job.runId,
-        phase: job.phase, error: error.message, aborted: job.controller.signal.aborted }, 'error');
+        phase: job.phase, error: error.message, stack: error.stack, code: error.code, status: error.status, cause: error.cause, aborted: job.controller.signal.aborted }, 'error');
     error.drawTaskReported = true;
     job.settled = !job.runId || !error?.uncertain;
     if (error?.detached || error?.uncertain || isPendingJobLeaseLost(error)) job.state = 'uncertain';

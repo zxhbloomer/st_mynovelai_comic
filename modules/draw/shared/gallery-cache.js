@@ -1,6 +1,8 @@
 // gallery-cache.js
 // 画廊和缓存管理模块
 
+import { appendDrawLog } from './scene-planner-debug.js';
+
 import { getContext } from "../../../../../../extensions.js";
 import { saveBase64AsFile } from "../../../../../../utils.js";
 import { hasPreviewImage, DRAW_SLOT_COPY, PreviewStatus } from './image-record.js';
@@ -676,6 +678,8 @@ export async function storePreview(opts) {
 }
 
 export async function storeFailedPlaceholder(opts) {
+    appendDrawLog('图片任务 · 单图失败', { imgId: opts.imgId, slotId: opts.slotId, messageId: opts.messageId,
+        errorType: opts.errorType, errorMessage: opts.errorMessage }, 'error');
     return storePreview({
         imgId: opts.imgId || `failed-${opts.slotId}-${Date.now()}`,
         slotId: opts.slotId,

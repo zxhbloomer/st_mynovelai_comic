@@ -6,7 +6,9 @@ let logSequence = 0;
 // Memory only; never intercept unrelated console output or save account settings.
 export function appendDrawLog(stage, details = {}, level = 'info') {
     try {
-        const text = JSON.stringify(redactRequestSecrets(details), null, 2)
+        const normalized = JSON.parse(JSON.stringify(details, (key, value) => value instanceof Error
+            ? { name: value.name, message: value.message, stack: value.stack, code: value.code, status: value.status, cause: value.cause } : value));
+        const text = JSON.stringify(redactRequestSecrets(normalized), null, 2)
             .replace(/Bearer\s+[^\s"\\]+/gi, 'Bearer [redacted]')
             .replace(/sk-[A-Za-z0-9_-]+/g, '[redacted]')
             .replace(/([?&](?:api_key|apiKey|token|key)=)[^&\s"]+/gi, '$1[redacted]');
@@ -22,7 +24,7 @@ export function clearDrawLogs() { drawLogs.length = 0; }
 // Use log, not the monitored error/warn channels or an intercepted module prefix.
 // Planner diagnostics belong in F12 even when the LittleWhiteBox monitor is off.
 export function logScenePlannerDiagnostic(label, details, logger = console) {
-    appendDrawLog(`① LLM · ${label}`, details, label.includes('失败') ? 'error' : 'info');
+    appendDrawLog(`① LLM · ${label}`, details, label.includes('失败') || label.includes('未通过') ? 'error' : 'info');
     try {
         logger.log(`[Scene Planner] ${label}`, redactRequestSecrets(details));
         return true;

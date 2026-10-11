@@ -4,7 +4,7 @@ export function normalizePromptRows(rows) {
     if (!Array.isArray(rows)) throw new TypeError('提示词组必须是列表');
     return rows.map((row, index) => {
         if (!row || typeof row.title !== 'string' || typeof row.content !== 'string') throw new TypeError('提示词必须包含标题和正文');
-        return { id: String(row.id || `row-${index}`), title: row.title, content: row.content };
+        return { id: String(row.id || `row-${index}`), title: row.title, content: row.content, enabled: row.enabled !== false };
     });
 }
 
@@ -20,7 +20,7 @@ export function normalizePromptGroups(value, preset = {}) {
 }
 
 export function joinPromptRows(rows) {
-    return normalizePromptRows(rows).filter(row => row.content.trim()).map(row =>
+    return normalizePromptRows(rows).filter(row => row.enabled && row.content.trim()).map(row =>
         (row.title.trim() ? `### ${row.title.trim()}\n` : '') + row.content).join('\n\n');
 }
 

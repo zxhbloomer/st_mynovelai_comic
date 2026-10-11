@@ -122,3 +122,19 @@ test('prompt groups retain legacy text, titles, order, explicit empty groups and
  assert.equal(imported.promptGroups.topSystem.length,2);
  assert.throws(()=>normalizePromptGroups({topSystem:[{title:'bad'}]},legacy),/标题和正文/);
 });
+
+ test('disabled prompt rows remain stored but are excluded from generation', async () => {
+ const {normalizePromptRows,joinPromptRows}=await import('../../modules/draw/shared/prompt-groups.js');
+ const rows=[{title:'启用',content:'使用'}, {title:'禁用',content:'忽略',enabled:false}];
+ assert.equal(normalizePromptRows(rows)[0].enabled,true);
+ assert.equal(normalizePromptRows(rows)[1].enabled,false);
+ assert.equal(joinPromptRows(rows),'### 启用\n使用');
+ });
+
+test('draw logs preserve nested error details and redact their credentials', async () => {
+ const {appendDrawLog,getDrawLogs,clearDrawLogs}=await import('../../modules/draw/shared/scene-planner-debug.js');
+ clearDrawLogs();const error=new Error('HTTP 500');error.cause={apiKey:'private',message:'upstream failed'};
+ appendDrawLog('失败',{error},'error');const entry=getDrawLogs()[0];
+ assert.match(entry.details,/HTTP 500/);assert.match(entry.details,/upstream failed/);assert.doesNotMatch(entry.details,/private/);
+ clearDrawLogs();
+});
