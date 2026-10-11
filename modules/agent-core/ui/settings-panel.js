@@ -589,7 +589,8 @@ export function createAgentSettingsPanel(deps = {}) {
                 ? (root.querySelector('#xb-assistant-tool-mode')?.value || draft.toolMode || 'native')
                 : undefined,
             requestBodyParams: root.querySelector('#xb-assistant-request-body-params')?.value || '',
-            timeoutMs: Math.max(1000, Number(root.querySelector('#xb-assistant-timeout-ms')?.value) || 600000),
+            // 页面输入单位是秒，运行时保存和传递单位是毫秒。
+            timeoutMs: Math.max(1, Number(root.querySelector('#xb-assistant-timeout-ms')?.value) || 600) * 1000,
         };
         const delegateProviderConfig = {
             baseUrl: delegateBaseUrl,

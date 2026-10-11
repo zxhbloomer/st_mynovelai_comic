@@ -96,9 +96,9 @@ function resolveDrawProviderConfig(rawSettings, timeout) {
     try {
         settings = normalizeAgentConfig(rawSettings || {});
         assertCurrentPreset(rawSettings, settings);
-        providerConfig = resolveActiveProviderConfig(settings, {
-            timeoutMs: normalizeScenePlannerTimeout(timeout),
-        });
+        providerConfig = resolveActiveProviderConfig(settings, timeout > 0
+            ? { timeoutMs: normalizeScenePlannerTimeout(timeout) }
+            : {});
         providerConfig = {
             ...providerConfig,
             reasoning: {

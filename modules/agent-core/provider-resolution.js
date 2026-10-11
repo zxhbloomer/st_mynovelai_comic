@@ -91,7 +91,8 @@ export function resolveActiveProviderConfig(configValue = {}, options = {}) {
             temperature: resolveTemperature(providerConfig),
             sendTemperature: shouldSendTemperature(providerConfig),
             maxTokens: normalizeMaxTokens(providerConfig.maxTokens),
-            timeoutMs: Number(options.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
+            timeoutMs: Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : Number(providerConfig.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
+            requestBodyParams: String(providerConfig.requestBodyParams || ''),
             toolMode: providerConfig.toolMode || 'native',
             reasoning: resolveRuntimeReasoning(context, providerConfig.reasoning),
         };
@@ -126,7 +127,8 @@ export function resolveActiveProviderConfig(configValue = {}, options = {}) {
         temperature: resolveTemperature(providerConfig),
         sendTemperature: shouldSendTemperature(providerConfig),
         maxTokens: normalizeMaxTokens(providerConfig.maxTokens),
-        timeoutMs: Number(options.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
+        timeoutMs: Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : Number(providerConfig.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
+            requestBodyParams: String(providerConfig.requestBodyParams || ''),
         toolMode: providerConfig.toolMode || 'native',
         reasoning: resolveRuntimeReasoning(context, providerConfig.reasoning),
     };
