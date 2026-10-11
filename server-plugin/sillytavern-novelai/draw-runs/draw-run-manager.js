@@ -429,7 +429,7 @@ class DrawRunManager {
                     index,
                     ...ids,
                     insertOffset: point.offset,
-                    displayMetadata: buildDisplayMetadata(artifact, plannerSourceText),
+                    displayMetadata: { ...buildDisplayMetadata(artifact, plannerSourceText), collapseImages: run.generationRecipe.collapseImages === true },
                 };
             });
             this.imageJobService.create(run.owner, {

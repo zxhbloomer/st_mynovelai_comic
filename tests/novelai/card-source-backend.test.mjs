@@ -22,10 +22,11 @@ test('backend handoff retains original NovelAI source after releasing planner in
     try {
         manager.create('owner', { runId: 'run', sourceHash: 'hash', imageProvider: 'novelai',
             planner: { validationContext: { sceneSource: { sourceText: '生图时的原始描述', points: [{ offset: 3 }] } } },
-            agent: { channel: 'custom', providerConfig: {} }, generationRecipe: {} });
+            agent: { channel: 'custom', providerConfig: {} }, generationRecipe: { collapseImages: true } });
         await new Promise(resolve => setImmediate(resolve));
         const result = manager.get('owner', 'run');
         assert.equal(result.state, 'dispatched');
+        assert.equal(result.handoffManifest.items[0].displayMetadata.collapseImages, true);
         assert.equal(result.handoffManifest.items[0].displayMetadata.plannerSourceText, '生图时的原始描述');
         assert.equal(result.handoffManifest.items[0].displayMetadata.plannerSourceOrigin, 'captured');
     } finally {

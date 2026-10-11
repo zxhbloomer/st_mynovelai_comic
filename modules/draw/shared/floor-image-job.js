@@ -1,4 +1,5 @@
 import { DRAW_SLOT_COPY, DRAW_SLOT_ERRORS } from './image-record.js';
+import { appendDrawLog } from './scene-planner-debug.js';
 import { isPendingJobLeaseLost } from './recoverable-image-jobs.js';
 import { subscribeDrawRunActivity } from './draw-run-activity.js';
 
@@ -46,6 +47,7 @@ export function acquireFloorImageJob(jobs, ctx, messageId, create, { join = fals
         swipeIndex: message?.swipe_id ?? 0, state: 'queued', current: 0, total: 0, success: 0,
         unknown: 0, aborted: false, settled: false, released: false };
     jobs.set(job, job);
+    appendDrawLog('图片任务 · 创建', { messageId, scope, swipeIndex: job.swipeIndex });
     return job;
 }
 
@@ -96,6 +98,10 @@ export function observeFloorImageJob(job, { getCurrentContext, onStateChange, cl
     }
     publish(job);
     const update = (state, data = {}) => {
+        if (job.state !== state || data.current !== job.current) appendDrawLog('图片任务 · 状态', {
+            messageId: job.messageId, state, runId: data.runId, current: data.current,
+            total: data.total, success: data.success, label: data.label,
+        });
         if (data.runId && !job.runId) {
             job.runId = data.runId;
             job.unsubscribe = subscribeDrawRunActivity(detail => {
@@ -128,6 +134,8 @@ export function observeFloorImageJob(job, { getCurrentContext, onStateChange, cl
 }
 
 export function failFloorImageJob(job, error) {
+    appendDrawLog('图片任务 · 失败或取消', { messageId: job.messageId, runId: job.runId,
+        phase: job.phase, error: error.message, aborted: job.controller.signal.aborted }, 'error');
     error.drawTaskReported = true;
     job.settled = !job.runId || !error?.uncertain;
     if (error?.detached || error?.uncertain || isPendingJobLeaseLost(error)) job.state = 'uncertain';

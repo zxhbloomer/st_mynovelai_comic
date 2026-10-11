@@ -2,6 +2,8 @@ import { startComicJobRecovery } from '../../shared/comic-job-recovery.js';
 import { getPendingImageJobSlots } from '../../shared/pending-image-jobs.js';
 import { normalizeComicMode, buildComicMessages, createComicTasks } from '../../shared/comic-planning.js';
 import { callComicText } from '../../shared/comic-agent.js';
+import { normalizePromptGroups, applyPromptGroups } from '../../shared/prompt-groups.js';
+import { appendDrawLog, getDrawLogs, clearDrawLogs } from '../../shared/scene-planner-debug.js';
 // novel-draw.js
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -856,6 +858,8 @@ function normalizeSettings(saved = {}) {
                 : DEFAULT_PROMPT_CONFIG.sceneRules,
             imageMode: normalizeComicMode(preset.imageMode),
             modelGuideOverrides: normalizeNovelPromptGuideOverrides(preset.modelGuideOverrides),
+            promptGroups: normalizePromptGroups(preset.promptGroups, { ...preset, topSystem: preset.topSystem ?? (isPov ? DEFAULT_PROMPT_CONFIG.topSystemPov : DEFAULT_PROMPT_CONFIG.topSystem), sceneRules: preset.sceneRules ?? DEFAULT_PROMPT_CONFIG.sceneRules }),
+            collapseImages: preset.collapseImages === true,
         };
     });
     if (!merged.selectedPromptPresetId
@@ -1099,7 +1103,7 @@ function getActiveParamsPreset() {
 }
 
 function getActivePromptPreset(s = getSettings()) {
-    return s.promptPresets.find(p => p.id === s.selectedPromptPresetId) || s.promptPresets[0] || null;
+    return applyPromptGroups(s.promptPresets.find(p => p.id === s.selectedPromptPresetId) || s.promptPresets[0] || null);
 }
 
 function compactPromptGuideOverrides(value) {
@@ -1588,6 +1592,7 @@ export function createNovelGenerationRecipe({
             min: Number(settings.requestDelay?.min) || DEFAULT_SETTINGS.requestDelay.min,
             max: Number(settings.requestDelay?.max) || DEFAULT_SETTINGS.requestDelay.max,
         },
+        collapseImages: getActivePromptPreset(settings)?.collapseImages === true,
         overrideSize: String(settings.overrideSize || 'default'),
         baseHref: globalThis.location?.href,
         resolveForBackend: resolveForBackend === true,
@@ -1760,6 +1765,9 @@ async function runNovelImageBatch({
                 transportMode !== 'frontend',
             )
         ));
+    prepared.forEach((item, index) => appendDrawLog('绘图 · 请求准备', {
+        image: index + 1, total: prepared.length, transportMode, payload: item.payload,
+    }));
     const outcomes = new Array(prepared.length);
     const signalOwner = generationJobSignals.get(signal);
     const effectiveCancelSignal = backendCancelSignal || signalOwner?.backendCancel.signal || signal;
@@ -1923,7 +1931,9 @@ async function runNovelImageBatch({
             if (base64 === null) continue;
             await onItemReady?.({ index, base64 });
             outcomes[index] = { state: 'ready', base64 };
+            appendDrawLog('绘图 · 图片完成', { image: index + 1, total: prepared.length });
         } catch (error) {
+            appendDrawLog('绘图 · 请求失败', { image: index + 1, error: error.message }, 'error');
             const normalized = handleFetchError(error);
             const state = signal?.aborted ? 'cancelled' : 'failed';
             outcomes[index] = { state, error: normalized };
@@ -2309,6 +2319,7 @@ async function maybeOpenComicEditor(container) {
         },
         render: () => renderSharedPreviewsForMessage(getContext().chat.indexOf(message), { refreshSlotIds: [container.dataset.slotId] }),
         redraw: async (selected, comic) => {
+            appendDrawLog('小铅笔 · 重画', { slotId: selected.slotId, imageId: selected.imgId, mode: comic.mode });
             const ctx = getContext(), messageId = ctx.chat.indexOf(message);
             return generatePreparedChatImages('novelai', { ctx, message, messageId,
                 sourceText: message.mes, swipeIndex: message.swipe_id ?? 0,
@@ -2667,6 +2678,8 @@ async function buildNovelScenePlannerOptions({
 
 
 async function buildComicSourceTasks({ sourceText, settings, preset, signal, onStateChange, useWorldbook = true }) {
+    appendDrawLog('②③ 规划 · 开始准备', { mode: getActivePromptPreset(settings)?.imageMode,
+        sourceLength: sourceText.length, useWorldInfo: useWorldbook && settings.useWorldInfo });
     const prompt = getActivePromptPreset(settings) || {};
     const mode = normalizeComicMode(prompt.imageMode);
     let worldInfo = '';
@@ -2683,12 +2696,14 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
         worldInfo = [worldInfo, info.worldInfoBefore, info.worldInfoAfter,
             ...(info.worldInfoDepth || []).flatMap(entry => entry.entries || [])].filter(Boolean).join('\n\n');
     }
+    appendDrawLog('②③ 规划 · 世界书处理完成', { length: worldInfo.length });
     const guide = getEffectiveNovelModelGuide(preset.params?.model, prompt);
     const messages = buildComicMessages({ source: sourceText, mode, maxImages: preset.maxImages || 0,
         opening: prompt.topSystem, guide, rules: prompt.sceneRules, worldInfo });
     onStateChange?.('llm', { phase: 'analysis', label: '生成完整图片描述' });
     const response = await callComicText(messages, { signal });
     const tasks = createComicTasks({ source: sourceText, response, mode, maxImages: preset.maxImages || 0 });
+    appendDrawLog('②③ 规划 · 描述解析完成', { mode, images: tasks.length });
     for (const task of tasks) {
         task.comic.ruleMessages = messages.filter(message => message.role === 'system');
         task.comic.guide = guide;
@@ -2832,7 +2847,7 @@ async function generateImagesFromText(options = {}) {
         for (const item of batchItems) if (item.task.comic) {
             await storePreview({ ...galleryMeta, imgId: item.imgId, slotId: item.slotId, messageId,
                 tags: item.tagsForStore, positive: item.scene, comic: item.task.comic,
-                status: 'pending', generationSnapshot: item.generationSnapshot,
+                status: 'pending', generationSnapshot: item.generationSnapshot, collapseImages: getActivePromptPreset(settings)?.collapseImages === true,
                 plannerSourceText: text, plannerSourceOrigin: 'captured',
                 characterPrompts: item.characterPrompts, negativePrompt: item.negativePrompt });
         }
@@ -2855,7 +2870,7 @@ async function generateImagesFromText(options = {}) {
                     tags: item.tagsForStore,
                     positive: item.scene,
                     ...(item.task.comic ? { comic: item.task.comic } : {}),
-                    generationSnapshot: item.generationSnapshot,
+                    generationSnapshot: item.generationSnapshot, collapseImages: getActivePromptPreset(settings)?.collapseImages === true,
                     plannerSourceText: text,
                     plannerSourceOrigin: 'captured',
                     characterPrompts: item.characterPrompts,
@@ -2888,7 +2903,7 @@ async function generateImagesFromText(options = {}) {
                     positive: item.scene,
                     errorType: errorType.code,
                     ...(item.task.comic ? { comic: item.task.comic } : {}),
-                    generationSnapshot: item.generationSnapshot,
+                    generationSnapshot: item.generationSnapshot, collapseImages: getActivePromptPreset(settings)?.collapseImages === true,
                     plannerSourceText: text,
                     plannerSourceOrigin: 'captured',
                     errorMessage: errorType.desc,
@@ -3324,6 +3339,12 @@ async function handleFrameMessage(event) {
             }
             break;
 
+        case 'GET_DRAW_LOGS':
+        case 'CLEAR_DRAW_LOGS':
+            if (data.type === 'CLEAR_DRAW_LOGS') clearDrawLogs();
+            postToIframe(iframe, { type: 'DRAW_LOGS_DATA', records: getDrawLogs() }, 'HuaManhua-NovelDraw');
+            break;
+
         case 'CLOSE':
             hideOverlay();
             break;
@@ -3577,7 +3598,9 @@ async function handleFrameMessage(event) {
                     name: (typeof data.name === 'string' && data.name.trim()) ? data.name.trim() : `提示词-${settings.promptPresets.length + 1}`,
                     topSystem: current?.topSystem ?? DEFAULT_PROMPT_CONFIG.topSystem,
                     sceneRules: current?.sceneRules ?? DEFAULT_PROMPT_CONFIG.sceneRules,
-                    imageMode: 'points',
+                    imageMode: current?.imageMode || 'points',
+                    promptGroups: normalizePromptGroups(current?.promptGroups, current),
+                    collapseImages: current?.collapseImages === true,
                     modelGuideOverrides: normalizeNovelPromptGuideOverrides(current?.modelGuideOverrides),
                 };
                 settings.promptPresets.push(newPreset);
@@ -3675,6 +3698,8 @@ async function handleFrameMessage(event) {
                     presetFound = true;
                     settings.selectedPromptPresetId = presetId;
                     const cp = data.promptDraft;
+                    if ('promptGroups' in cp) current.promptGroups = normalizePromptGroups(cp.promptGroups, cp);
+                    if ('collapseImages' in cp) current.collapseImages = cp.collapseImages === true;
                     if ('topSystem' in cp) current.topSystem = cp.topSystem;
                     if ('sceneRules' in cp) current.sceneRules = cp.sceneRules;
                     if ('imageMode' in cp) current.imageMode = normalizeComicMode(cp.imageMode);
@@ -3823,13 +3848,13 @@ async function handleFrameMessage(event) {
         case 'GET_PROMPT_CHAIN': {
             const currentPrompts = getActivePromptPreset() || {};
             const model = String(data.model || getActiveParamsPreset()?.params?.model || '');
-            const promptDraft = {
+            const promptDraft = applyPromptGroups({
                 ...currentPrompts,
                 ...data.promptDraft,
                 modelGuideOverrides: normalizeNovelPromptGuideOverrides(
                     data.promptDraft?.modelGuideOverrides ?? currentPrompts.modelGuideOverrides,
                 ),
-            };
+            });
             if (iframe?.isConnected) postToIframe(iframe, {
                 type: 'PROMPT_CHAIN_DATA',
                 requestId: data.requestId,

@@ -689,6 +689,7 @@ select.input { cursor: pointer; }
             <div class="nav-divider"></div>
             <div class="nav-item nd-advanced-only" data-view="prompts"><i class="fa-solid fa-file-code"></i>提示词模板</div>
             <div class="nav-item" data-view="worldbook"><i class="fa-solid fa-book-atlas"></i>世界书</div>
+            <div class="nav-item" data-view="logs"><i class="fa-solid fa-list"></i>日志</div>
         </nav>
 
         <!-- ═══════════════════════════════════════════════════════════════════
@@ -1199,13 +1200,7 @@ select.input { cursor: pointer; }
                  提示词模板
                  ═══════════════════════════════════════════════════════════════ -->
             <div id="view-prompts" class="view">
-                <fieldset class="card" style="display:grid;gap:10px;">
-                    <legend class="card-title">生图规则</legend>
-                    <label><input type="radio" name="nd_image_mode" value="points" checked> ① llm插图点生图（图片无法 AI 改写）</label>
-                    <label><input type="radio" name="nd_image_mode" value="inline"> ② llm文章中生图（包含插图提示词，可ai修改生图）</label>
-                    <label><input type="radio" name="nd_image_mode" value="end"> ③ llm文章末尾（包含插图提示词，可ai修改生图）</label>
-                    <p class="form-hint">跟随提示词预设保存。②③的完整生成描述随图片保存，正文只显示图片。</p>
-                </fieldset>
+
                 <div class="view-header">
                     <h2 class="view-title">提示词模板</h2>
                     <p class="view-desc">自定义场景分析的 LLM 提示词模板</p>
@@ -1224,13 +1219,25 @@ select.input { cursor: pointer; }
                     <div id="nd_prompt_preset_status" class="status-text inline-status"></div>
                 </div>
 
+                <fieldset class="card" style="display:grid;gap:10px;">
+                    <legend class="card-title">生图规则</legend>
+                    <label><input type="radio" name="nd_image_mode" value="points" checked> ① llm插图点生图（图片无法 AI 改写）</label>
+                    <label><input type="radio" name="nd_image_mode" value="inline"> ② llm文章中生图（包含插图提示词，可ai修改生图）</label>
+                    <label><input type="radio" name="nd_image_mode" value="end"> ③ llm文章末尾（包含插图提示词，可ai修改生图）</label>
+                    <p class="form-hint">跟随提示词预设保存。②③的完整生成描述随图片保存，正文只显示图片。</p>
+                <label class="check-row"><input type="checkbox" id="nd_collapse_images"> 图片默认折叠（关闭时默认展开）</label>
+                    <p class="form-hint">随预设保存，新图片记住此设置；旧图默认展开，点击图片标题可展开或收起。</p>
+                </fieldset>
+
                 <div class="card">
                     <div class="prompt-card-header">
                         <div class="card-title">开场与视角</div>
                         <button class="btn btn-sm" id="nd_prompt_reset_system"><i class="fa-solid fa-rotate-left"></i> 恢复默认</button>
                     </div>
                     <p class="form-hint">规划器是谁、要做什么、正文用什么视角写成。第一人称预设在这里说明 &lt;user&gt; 是相机、默认不出镜。</p>
-                    <textarea id="nd_prompt_system" class="prompt-textarea" rows="8"></textarea>
+                    <textarea id="nd_prompt_system" class="prompt-textarea" hidden rows="8"></textarea>
+                    <div id="nd_prompt_system_group"></div>
+                    <button class="btn btn-sm" type="button" data-add-prompt="topSystem">＋ 新增提示词</button>
                 </div>
 
                 <div class="card">
@@ -1239,7 +1246,9 @@ select.input { cursor: pointer; }
                         <button class="btn btn-sm" id="nd_prompt_reset_guide"><i class="fa-solid fa-rotate-left"></i> 恢复当前模型默认</button>
                     </div>
                     <p class="form-hint">当前模型认哪些 tag、权重和语法怎么写。随参数预设中的模型自动切换 V4.5 / V5；修改保存到当前提示词预设。</p>
-                    <textarea id="nd_prompt_guide" class="prompt-textarea" rows="8"></textarea>
+                    <textarea id="nd_prompt_guide" class="prompt-textarea" hidden rows="8"></textarea>
+                    <div id="nd_prompt_guide_group"></div>
+                    <button class="btn btn-sm" type="button" data-add-prompt="modelGuide">＋ 新增提示词</button>
                 </div>
 
                 <div class="card">
@@ -1248,7 +1257,9 @@ select.input { cursor: pointer; }
                         <button class="btn btn-sm" id="nd_prompt_reset_format"><i class="fa-solid fa-rotate-left"></i> 恢复默认</button>
                     </div>
                     <p class="form-hint">画什么、怎么画：分级、构图、角色外貌与服装、动作、光影、物理约束与内容偏好。</p>
-                    <textarea id="nd_prompt_format" class="prompt-textarea" rows="8"></textarea>
+                    <textarea id="nd_prompt_format" class="prompt-textarea" hidden rows="8"></textarea>
+                    <div id="nd_prompt_format_group"></div>
+                    <button class="btn btn-sm" type="button" data-add-prompt="sceneRules">＋ 新增提示词</button>
                 </div>
 
                 <div class="action-status-row">
@@ -1357,6 +1368,18 @@ select.input { cursor: pointer; }
                 </div>
             </div>
 
+            <div class="view" id="view-logs">
+                <div class="view-header"><h2 class="view-title">日志</h2>
+                    <p class="view-desc">本次页面运行的最近 100 条记录，刷新酒馆后清空。长内容会截断。后台任务只显示客户端收到的状态，不代替服务器完整日志。</p>
+                </div>
+                <div class="btn-group">
+                    <button id="nd_logs_refresh" class="btn">刷新</button>
+                    <button id="nd_logs_clear" class="btn">清空</button>
+                    <button id="nd_logs_export" class="btn">导出日志</button>
+                </div>
+                <p class="form-hint">点击记录展开提示词、返回内容和错误详情。日志可能包含正文，分享前请检查内容。</p>
+                <div id="nd_logs_records" aria-live="polite"><p class="form-hint">暂无日志</p></div>
+            </div>
         </main>
     </div>
 
@@ -1373,6 +1396,7 @@ select.input { cursor: pointer; }
             <div class="mobile-nav-item" data-view="gallery"><i class="fa-solid fa-images"></i><span>图片</span></div>
             <div class="mobile-nav-item nd-advanced-only" data-view="prompts"><i class="fa-solid fa-file-code"></i><span>提示词</span></div>
             <div class="mobile-nav-item" data-view="worldbook"><i class="fa-solid fa-book-atlas"></i><span>世界书</span></div>
+            <div class="mobile-nav-item" data-view="logs"><i class="fa-solid fa-list"></i><span>日志</span></div>
         </div>
     </nav>
 
@@ -1576,7 +1600,29 @@ function shuffleCredits() {
 // UI 更新
 // ═══════════════════════════════════════════════════════════════════════════
 
+let drawLogRecords = [];
+let drawLogRevision = '';
+function renderDrawLogs(records) {
+    drawLogRecords = records;
+    const revision = records.map(row => row.id).join(',');
+    if (revision === drawLogRevision) return;
+    drawLogRevision = revision;
+    const root = $('nd_logs_records');
+    root.replaceChildren();
+    if (!records.length) { root.textContent = '暂无日志'; return; }
+    for (const record of [...records].reverse()) {
+        const details = document.createElement('details'); details.className = 'card';
+        const summary = document.createElement('summary');
+        summary.textContent = `${new Date(record.time).toLocaleTimeString()} · ${record.stage}${record.level === 'error' ? ' · 错误' : ''}`;
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;font:12px/1.5 monospace';
+        pre.textContent = record.details;
+        details.append(summary, pre); root.append(details);
+    }
+}
+
 function switchView(viewId) {
+    if (viewId === 'logs') postToParent({ type: 'GET_DRAW_LOGS' });
     $$('.view').forEach(v => v.classList.remove('active'));
     $$('.nav-item, .mobile-nav-item').forEach(n => n.classList.remove('active'));
     $(`view-${viewId}`)?.classList.add('active');
@@ -1599,6 +1645,8 @@ function requestPromptChainPreview() {
         requestId,
         model: model || '',
         promptDraft: {
+            promptGroups: collectPromptGroups(),
+            collapseImages: $('nd_collapse_images').checked,
             topSystem: $('nd_prompt_system')?.value || '',
             sceneRules: $('nd_prompt_format')?.value || '',
             imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
@@ -2771,6 +2819,53 @@ function applyParamsPreset() {
 }
 
 /** 纯本地：从当前选中的提示词预设加载 textarea 内容（对标 applyParamsPreset） */
+const promptGroupDrafts = new Map();
+const promptGroupIds = { topSystem: 'nd_prompt_system', sceneRules: 'nd_prompt_format', modelGuide: 'nd_prompt_guide' };
+function getPromptGroupDraft() {
+    const active = getActivePromptPresetForForm() || {};
+    if (!promptGroupDrafts.has(active.id)) promptGroupDrafts.set(active.id, JSON.parse(JSON.stringify(active.promptGroups || {
+        topSystem: [{ id: 'opening', title: '', content: active.topSystem || '' }],
+        sceneRules: [{ id: 'rules', title: '', content: active.sceneRules || '' }], modelGuides: {},
+    })));
+    return promptGroupDrafts.get(active.id);
+}
+function collectPromptGroups() { return JSON.parse(JSON.stringify(getPromptGroupDraft())); }
+function renderPromptGroup(key) {
+    const draft = getPromptGroupDraft(), guideId = getCurrentModelGuideId();
+    const target = key === 'modelGuide' ? draft.modelGuides : draft;
+    const field = key === 'modelGuide' ? guideId : key;
+    const textarea = $(promptGroupIds[key]);
+    const rows = target[field] || [{ id: 'legacy', title: '', content: textarea.value }];
+    const root = $(promptGroupIds[key] + '_group'); root.replaceChildren();
+    const update = () => {
+        target[field] = rows;
+        textarea.value = rows.filter(row => row.content.trim()).map(row =>
+            (row.title.trim() ? `### ${row.title.trim()}\n` : '') + row.content).join('\n\n');
+        textarea.dispatchEvent(new Event('input'));
+    };
+    for (const row of rows) {
+        const card = document.createElement('details'); card.className = 'card'; card.open = true;
+        const head = document.createElement('summary'); head.textContent = row.title || '未命名提示词';
+        const title = document.createElement('input'); title.className = 'input'; title.placeholder = '提示词标题';
+        title.setAttribute('aria-label', '提示词标题'); title.value = row.title;
+        const content = document.createElement('textarea'); content.className = 'prompt-textarea'; content.rows = 6;
+        content.setAttribute('aria-label', '提示词正文'); content.value = row.content;
+        const remove = document.createElement('button'); remove.className = 'btn btn-sm btn-danger'; remove.textContent = '删除此提示词';
+        title.addEventListener('input', () => { row.title = title.value; head.textContent = row.title || '未命名提示词'; update(); });
+        content.addEventListener('input', () => { row.content = content.value; update(); });
+        remove.addEventListener('click', () => { rows.splice(rows.indexOf(row), 1); update(); renderPromptGroup(key); });
+        card.append(head, title, content, remove); root.append(card);
+    }
+    textarea.value = rows.filter(row => row.content.trim()).map(row =>
+        (row.title.trim() ? `### ${row.title.trim()}\n` : '') + row.content).join('\n\n');
+}
+function resetPromptGroup(key, content) {
+    const draft = getPromptGroupDraft();
+    if (key === 'modelGuide') delete draft.modelGuides[getCurrentModelGuideId()];
+    else draft[key] = [{ id: key + '-default', title: '', content }];
+    renderPromptGroup(key);
+}
+
 function applyPromptPreset() {
     const active = getActivePromptPresetForForm() || {};
     const drafts = active.id ? promptTextDraftsByPreset.get(active.id) : null;
@@ -2781,6 +2876,8 @@ function applyPromptPreset() {
         ? drafts.get('sceneRules')
         : active.sceneRules ?? '';
     document.querySelectorAll('[name=nd_image_mode]').forEach(input => { input.checked = input.value === (drafts?.get('imageMode') || active.imageMode || 'points'); });
+    $('nd_collapse_images').checked = drafts?.has('collapseImages') ? drafts.get('collapseImages') === 'true' : active.collapseImages === true;
+    renderPromptGroup('topSystem'); renderPromptGroup('sceneRules');
     applyModelGuideForCurrentModel();
 }
 
@@ -2874,6 +2971,7 @@ function applyModelGuideForCurrentModel() {
             : defaultContent;
 
     $('nd_prompt_guide').value = content;
+    renderPromptGroup('modelGuide');
 }
 
 function setSelectOrCustom(kind, value) {
@@ -2960,6 +3058,10 @@ window.addEventListener('message', event => {
     if (!data || data.source !== 'HuaManhua-NovelDraw') return;
 
     switch (data.type) {
+        case 'DRAW_LOGS_DATA':
+            renderDrawLogs(data.records || []);
+            break;
+
         case 'INIT_DATA':
             console.log('[ND-UI] INIT_DATA received — autoLearn=%s, advMode=%s, promptPresets:',
                 data.settings?.autoLearnCharacters, data.settings?.advancedMode,
@@ -3512,6 +3614,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setSavingState($('nd_prompt_preset_save'));
         getActivePromptPresetForForm();
         postToParent({ type: 'SAVE_PROMPT_PRESET', selectedPromptPresetId: state.selectedPromptPresetId, promptDraft: {
+            promptGroups: collectPromptGroups(),
+            collapseImages: $('nd_collapse_images').checked,
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
             imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
@@ -3544,6 +3648,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setSavingState($('nd_prompts_save'));
         getActivePromptPresetForForm();
         postToParent({ type: 'SAVE_PROMPT_PRESET', selectedPromptPresetId: state.selectedPromptPresetId, promptDraft: {
+            promptGroups: collectPromptGroups(),
+            collapseImages: $('nd_collapse_images').checked,
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
             imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
@@ -3559,18 +3665,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const defaultTopSystem = isPov ? (state._defaultPrompts?.topSystemPov || '') : (state._defaultPrompts?.topSystem || '');
         $('nd_prompt_system').value = defaultTopSystem;
         setCurrentPromptTextDraft('topSystem', defaultTopSystem);
+        resetPromptGroup('topSystem', defaultTopSystem);
         refreshChainIfOpen();
     });
     $('nd_prompt_reset_format').addEventListener('click', () => {
         const defaultSceneRules = state._defaultPrompts?.sceneRules || '';
         $('nd_prompt_format').value = defaultSceneRules;
         setCurrentPromptTextDraft('sceneRules', defaultSceneRules);
+        resetPromptGroup('sceneRules', defaultSceneRules);
         refreshChainIfOpen();
     });
     $('nd_prompt_reset_guide').addEventListener('click', () => {
         const defaultContent = state.modelGuideDefaults?.[getCurrentModelGuideId()] ?? '';
         $('nd_prompt_guide').value = defaultContent;
         setCurrentModelGuideDraft(defaultContent);
+        resetPromptGroup('modelGuide', defaultContent);
         refreshChainIfOpen();
     });
     $('nd_prompts_reset_all').addEventListener('click', () => {
@@ -3594,6 +3703,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.entries(state.modelGuideDefaults || {})
                 .filter(([, content]) => typeof content === 'string'),
         ));
+        promptGroupDrafts.set(activePreset.id, { topSystem: [{ id: 'opening', title: '', content: topSystemVal }], sceneRules: [{ id: 'rules', title: '', content: sceneRulesVal }], modelGuides: {} });
+        renderPromptGroup('topSystem'); renderPromptGroup('sceneRules');
         applyModelGuideForCurrentModel();
         refreshChainIfOpen();
     });
@@ -3602,8 +3713,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const activePreset = getActivePromptPresetForForm() || {};
         const data = {
             _type: 'novel-draw-prompt-template',
-            _version: 3,
+            _version: 4,
             name: activePreset.name || '',
+            promptGroups: collectPromptGroups(),
+            collapseImages: $('nd_collapse_images').checked,
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
             imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
@@ -3684,6 +3797,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════════════════════════════════════
     // 通知父窗口准备就绪
     // ═══════════════════════════════════════════════════════════════════════
+    document.querySelectorAll('[data-add-prompt]').forEach(button => button.addEventListener('click', () => {
+        const key = button.dataset.addPrompt, draft = getPromptGroupDraft();
+        const target = key === 'modelGuide' ? draft.modelGuides : draft;
+        const field = key === 'modelGuide' ? getCurrentModelGuideId() : key;
+        if (!target[field]) target[field] = [{ id: 'legacy', title: '', content: $(promptGroupIds[key]).value }];
+        target[field].push({ id: 'prompt-' + crypto.randomUUID(), title: '', content: '' });
+        renderPromptGroup(key);
+    }));
+    $('nd_collapse_images').addEventListener('change', () => setCurrentPromptTextDraft('collapseImages', String($('nd_collapse_images').checked)));
+    $('nd_logs_refresh').addEventListener('click', () => postToParent({ type: 'GET_DRAW_LOGS' }));
+    $('nd_logs_clear').addEventListener('click', () => postToParent({ type: 'CLEAR_DRAW_LOGS' }));
+    $('nd_logs_export').addEventListener('click', () => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(drawLogRecords, null, 2)], { type: 'application/json' }));
+        const link = document.createElement('a'); link.href = url; link.download = 'comic-draw-logs.json'; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    setInterval(() => {
+        if (!document.hidden && $('view-logs').classList.contains('active')) postToParent({ type: 'GET_DRAW_LOGS' });
+    }, 2000);
     postToParent({ type: 'FRAME_READY' });
 });
 </script>

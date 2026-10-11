@@ -1,10 +1,20 @@
 import { resolveDrawAgentContext } from './draw-agent.js';
+import { appendDrawLog } from './scene-planner-debug.js';
 import { compileComicRules } from './comic-planning.js';
 import { parseRerollResponse } from './comic-protocol.js';
 
-export async function callComicText(messages, { signal, timeout = 120000, context } = {}) {
+export async function callComicText(messages, { signal, timeout = 120000, context, operation = '生成描述' } = {}) {
     signal?.throwIfAborted();
-    const { agentCore, providerConfig } = context || await resolveDrawAgentContext({ timeout });
+    const requestId = `comic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const startedAt = Date.now();
+    appendDrawLog('②③ LLM · 读取设置', { requestId, operation });
+    let agentCore, providerConfig;
+    try {
+        ({ agentCore, providerConfig } = context || await resolveDrawAgentContext({ timeout }));
+    } catch (error) {
+        appendDrawLog('②③ LLM · 设置读取失败', { requestId, error: error.message }, 'error');
+        throw error;
+    }
     const controller = new AbortController();
     const abort = () => controller.abort(signal.reason);
     signal?.addEventListener('abort', abort, { once: true });
@@ -12,11 +22,18 @@ export async function callComicText(messages, { signal, timeout = 120000, contex
     const timer = setTimeout(() => controller.abort(new Error('图片描述生成超时')), timeout);
     try {
         const adapter = agentCore.createAgentAdapter(providerConfig);
+        appendDrawLog('②③ LLM · 开始请求', { requestId, operation, preset: providerConfig.currentPresetName,
+            provider: providerConfig.provider, model: providerConfig.model, messages });
         const result = await adapter.chat({ messages, tools: [], temperature: providerConfig.temperature,
             maxTokens: providerConfig.maxTokens, reasoning: providerConfig.reasoning, signal: controller.signal });
         controller.signal.throwIfAborted();
         if (!String(result?.text || '').trim()) throw new Error('LLM 未返回完整图片描述');
+        appendDrawLog('②③ LLM · 请求完成', { requestId, durationMs: Date.now() - startedAt, response: result.text });
         return result.text;
+    } catch (error) {
+        appendDrawLog('②③ LLM · 请求失败', { requestId, durationMs: Date.now() - startedAt,
+            error: error.message, aborted: controller.signal.aborted }, 'error');
+        throw error;
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
 
@@ -51,7 +68,7 @@ export async function rewriteComic(comic, requirement, options = {}) {
     const response = await callComicText([...rules,
         ...(comic.guide ? [{ role: 'system', content: comic.guide }] : []),
         ...(comic.worldInfo ? [{ role: 'system', content: comic.worldInfo }] : []),
-        { role: 'user', content: request.reference }, { role: 'user', content: request.userPrompt }], options);
+        { role: 'user', content: request.reference }, { role: 'user', content: request.userPrompt }], { ...options, operation: 'AI 改写' });
     const parsed = parseRerollResponse(response, request.mode);
     if (!parsed.ok) throw new Error(parsed.error);
     return { ...comic, image: parsed.image, planning: parsed.planning };

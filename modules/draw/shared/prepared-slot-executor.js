@@ -93,7 +93,7 @@ export async function executePreparedSlots({ items, backend, store, remove, sele
                     gallery: { chatId: items[0].chatId, messageId: String(items[0].messageId),
                         characterName: items[0].characterName },
                     items: items.map((item, index) => ({ index, slotId: item.slotId, imgId: item.imgId, discarded: item.discarded,
-                        previewMetadata: { tags: item.tags, positive: item.positive,
+                        previewMetadata: { collapseImages: item.collapseImages === true, tags: item.tags, positive: item.positive,
                             ...(item.comic ? { comic: item.comic } : {}),
                             characterPrompts: item.characterPrompts, negativePrompt: item.negativePrompt,
                             generationSnapshot: item.generationSnapshot,

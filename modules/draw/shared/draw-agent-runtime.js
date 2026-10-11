@@ -445,7 +445,7 @@ export async function callDrawScenePlannerAgentRuntime(options = {}) {
             });
 
             const startedAt = Date.now();
-            logScenePlannerDiagnostic('开始请求', { ...logContext, attempt, startedAt });
+            logScenePlannerDiagnostic('开始请求', { ...logContext, attempt, startedAt, messages: agentTask.messages });
             let result;
             try {
                 result = await adapter.chat(agentTask);
@@ -495,7 +495,7 @@ export async function callDrawScenePlannerAgentRuntime(options = {}) {
                 finishReason: String(result?.finishReason || ''),
             };
             attempts.push(attemptRecord);
-            logScenePlannerDiagnostic('请求完成', { ...logContext, ...attemptRecord });
+            logScenePlannerDiagnostic('请求完成', { ...logContext, ...attemptRecord, response: result.text, toolCalls: result.toolCalls });
             diagnostic.update({
                 stage: 'request',
                 ...buildInspectionDiagnosticPatch(inspection),

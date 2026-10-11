@@ -19,6 +19,7 @@ export function prepareImageInput(provider, tasks, recipe) {
     }));
     const metadata = compiledBatch.artifacts.map(({ task, promptData }) => ({
         ...(task.comic ? { comic: JSON.parse(JSON.stringify(task.comic)) } : {}),
+        collapseImages: recipe.collapseImages === true,
         tags: task.scene || '',
         positive: novel ? promptData.scene : promptData.positive,
         characterPrompts: promptData.characterPrompts,

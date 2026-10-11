@@ -299,7 +299,9 @@ export function ensureDrawImageStyles() {
     document.head.appendChild(style);
 }
 
-export function buildImageHtml({ slotId, imgId, url, tags, positive, messageId, state = ImageState.PREVIEW, historyCount = 1, currentIndex = 0 }) {
+export function buildImageHtml({ slotId, imgId, url, tags, positive, messageId, state = ImageState.PREVIEW, historyCount = 1, currentIndex = 0, collapseImages = false }) {
+    const existing = globalThis.document?.querySelector(buildDrawSlotSelector(slotId))?.querySelector('.xb-image-fold');
+    const expanded = existing ? existing.open : !collapseImages;
     const escapedTags = escapeHtml(tags);
     const escapedPositive = escapeHtml(positive);
     const isPreview = state === ImageState.PREVIEW;
@@ -329,12 +331,14 @@ export function buildImageHtml({ slotId, imgId, url, tags, positive, messageId, 
 
     return `<div class="xb-nd-img ${isBusy ? 'busy' : ''}" data-slot-id="${slotId}" data-img-id="${imgId}" data-tags="${escapedTags}" data-positive="${escapedPositive}" data-mesid="${messageId}" data-state="${state}" data-current-index="${currentIndex}" data-history-count="${historyCount}" style="margin:0.8em auto;position:relative;display:block;width:fit-content;max-width:100%;${border}border-radius:14px;padding:4px;">
 ${indicator}
+<details class="xb-image-fold" ${expanded ? 'open' : ''}><summary><span class="xb-image-open-label">📷 点击收起图片</span><span class="xb-image-closed-label">📷 点击展开图片</span></summary>
 <div class="xb-nd-img-wrap" data-total="${historyCount}">
     <img src="${escapeHtml(url)}" style="max-width:100%;width:auto;height:auto;border-radius:10px;cursor:pointer;box-shadow:0 3px 15px rgba(0,0,0,0.25);${isBusy ? 'opacity:0.5;' : ''}" data-action="open-gallery" ${lazyAttr}>
     ${navPill}
 </div>
 ${menuHtml}
 ${buildTagEditor(tags, false)}
+</details>
 </div>`;
 }
 
@@ -430,6 +434,7 @@ function normalizeDrawSavedEntry(slotId, data = {}) {
     if (!slotId || !data?.savedUrl) return null;
     return {
         slotId,
+        collapseImages: data.collapseImages === true,
         ...(data.comic ? { comic: data.comic } : {}),
         imgId: data.imgId || '',
         savedUrl: data.savedUrl,
@@ -470,6 +475,7 @@ export async function setDrawSavedEntry(messageId, slotId, data) {
         previous.savedUrl === entry.savedUrl &&
         previous.tags === entry.tags &&
         previous.positive === entry.positive &&
+        previous.collapseImages === entry.collapseImages &&
         JSON.stringify(previous.comic) === JSON.stringify(entry.comic);
     const legacyMap = getSavedMap(message, LEGACY_NOVEL_SAVED_EXTRA_KEY);
     const hasLegacyEntry = !!legacyMap?.[slotId];
@@ -514,6 +520,7 @@ export async function syncDrawSavedFromPreview(messageId, preview, overrides = {
         savedUrl: overrides.savedUrl || preview?.savedUrl,
         tags: overrides.tags ?? preview?.tags ?? '',
         positive: overrides.positive ?? preview?.positive ?? '',
+        collapseImages: preview?.collapseImages === true,
         ...(preview?.comic ? { comic: preview.comic } : {}),
     });
 }
@@ -552,6 +559,7 @@ async function resolveRenderPreviewForSlot(message, messageId, slotId) {
         return {
             preview: {
                 ...matchedPreview,
+                collapseImages: savedEntry.collapseImages === true,
                 ...(savedEntry.comic ? { comic: savedEntry.comic } : {}),
                 slotId,
                 imgId: savedEntry.imgId || matchedPreview?.imgId || `saved-${slotId}`,
@@ -720,6 +728,7 @@ async function renderPreviewsForMessageNow(messageId, {
                 replacementHtml = buildImageHtml({
                     slotId,
                     imgId: displayData.preview.imgId,
+                    collapseImages: displayData.preview.collapseImages === true,
                     url,
                     tags: displayData.preview.tags || '',
                     positive: displayData.preview.positive || '',

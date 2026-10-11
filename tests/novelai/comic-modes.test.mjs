@@ -75,3 +75,50 @@ test('inline/end append beside existing image slots without changing source or p
   if(mode==='end') assert.ok(placed.endsWith('[image:slot-new]'));
  }
 });
+
+
+test('draw logs redact credentials, bound memory and return detached records', async () => {
+ const {appendDrawLog,getDrawLogs,clearDrawLogs}=await import('../../modules/draw/shared/scene-planner-debug.js');
+ clearDrawLogs();
+ appendDrawLog('request',{apiKey:'private',nested:{Authorization:'Bearer private'},error:'Bearer exposed',url:'https://test.invalid?token=private',response:'sk-secret'});
+ const record=getDrawLogs()[0];
+ assert.doesNotMatch(record.details,/private|exposed|sk-secret/);
+ record.stage='changed';assert.equal(getDrawLogs()[0].stage,'request');
+ for(let i=0;i<101;i++)appendDrawLog('progress',{i});
+ assert.equal(getDrawLogs().length,100);
+ appendDrawLog('long',{response:'x'.repeat(40000)});assert.match(getDrawLogs().at(-1).details,/已截断/);
+ const circular={};circular.self=circular;assert.doesNotThrow(()=>appendDrawLog('invalid',circular));
+ clearDrawLogs();assert.deepEqual(getDrawLogs(),[]);
+});
+
+test('comic LLM logs capture real adapter request, response and terminal failure', async () => {
+ const {callComicText}=await import('../../modules/draw/shared/comic-agent.js');
+ const agentCore=await import('../../modules/agent-core/dist/agent-core-browser.js');
+ const {getDrawLogs,clearDrawLogs}=await import('../../modules/draw/shared/scene-planner-debug.js');
+ const previousFetch=globalThis.fetch;let count=0;
+ const context={agentCore,providerConfig:{provider:'openai-compatible',baseUrl:'https://test.invalid/v1',model:'test',apiKey:'dummy',timeoutMs:1000}};
+ try {
+  clearDrawLogs();
+  globalThis.fetch=async()=>{count++;return new Response(JSON.stringify({choices:[{message:{role:'assistant',content:'完整描述'},finish_reason:'stop'}]}),{status:200,headers:{'content-type':'application/json'}});};
+  assert.equal(await callComicText([{role:'user',content:'正文'}],{context}),'完整描述');
+  assert.equal(count,1);assert.match(getDrawLogs().find(r=>r.stage.includes('开始请求')).details,/正文/);
+  assert.match(getDrawLogs().at(-1).details,/完整描述/);
+  globalThis.fetch=async()=>new Response(JSON.stringify({error:{message:'test failure'}}),{status:400,headers:{'content-type':'application/json'}});
+  await assert.rejects(callComicText([{role:'user',content:'正文'}],{context}),/test failure/);
+  assert.equal(getDrawLogs().at(-1).level,'error');assert.match(getDrawLogs().at(-1).details,/test failure/);
+ } finally {globalThis.fetch=previousFetch;clearDrawLogs();}
+});
+
+
+test('prompt groups retain legacy text, titles, order, explicit empty groups and v4 import', async () => {
+ const {normalizePromptGroups,applyPromptGroups}=await import('../../modules/draw/shared/prompt-groups.js');
+ const legacy={topSystem:'旧开场\n保持原文',sceneRules:'旧规则',modelGuideOverrides:{'v4.5':'旧指南'}};
+ assert.equal(applyPromptGroups({...legacy,promptGroups:normalizePromptGroups(null,legacy)}).topSystem,legacy.topSystem);
+ const groups={topSystem:[{title:'视角',content:'第一条'},{title:'人物',content:'第二条'}],sceneRules:[],modelGuides:{'v4.5':[{title:'指南',content:'模型文字'}]}};
+ const imported=parseNovelPromptPresetImport({_type:'novel-draw-prompt-template',_version:4,...legacy,promptGroups:groups,collapseImages:true});
+ assert.equal(imported.topSystem,'### 视角\n第一条\n\n### 人物\n第二条');
+ assert.equal(imported.sceneRules,'');assert.equal(imported.collapseImages,true);
+ assert.equal(imported.modelGuideOverrides['v4.5'],'### 指南\n模型文字');
+ assert.equal(imported.promptGroups.topSystem.length,2);
+ assert.throws(()=>normalizePromptGroups({topSystem:[{title:'bad'}]},legacy),/标题和正文/);
+});

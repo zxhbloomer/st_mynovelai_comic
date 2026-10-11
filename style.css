@@ -430,19 +430,35 @@ body.immersive-mode .flex-container.flex1.alignitemscenter {
     display: none;
 }
 
-/* ②③ complete description editor. */
+/* ②③ editor styles ported from 文生图工具v1/src/original-manga.js history editor. */
 .xb-comic-editor { position:fixed; inset:0; z-index:10020; background:#000a; display:flex; align-items:center; justify-content:center; padding:16px; }
-.xb-comic-dialog { width:min(1200px,96vw); max-height:94vh; overflow:auto; background:var(--SmartThemeBlurTintColor,#202020); color:var(--SmartThemeBodyColor,#eee); border:1px solid var(--SmartThemeBorderColor,#666); border-radius:12px; padding:18px; }
-.xb-comic-columns { display:grid; grid-template-columns:minmax(220px,1fr) minmax(320px,2fr); gap:20px; }
-.xb-comic-preview { width:100%; max-height:65vh; object-fit:contain; }
-.xb-comic-dialog label { display:block; margin:8px 0; }
-.xb-comic-dialog textarea,.xb-comic-dialog select,.xb-comic-dialog input { display:block; width:100%; box-sizing:border-box; color:inherit; background:var(--SmartThemeQuoteColor,#333); border:1px solid #777; padding:6px; border-radius:4px; }
+.xb-comic-dialog { width:min(1200px,96vw); max-height:92dvh; overflow:auto; box-sizing:border-box; background:#424246; color:#fff; border:0; border-radius:16px; box-shadow:0px 8px 20px rgba(0,0,0,0.12); padding:20px 24px; font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif; font-size:13px; line-height:1.5; color-scheme:dark; }
+.xb-comic-columns { display:grid; grid-template-columns:minmax(220px,1fr) minmax(320px,2fr); gap:12px; }
+.xb-comic-columns > div { min-width:0; }
+.xb-comic-preview { width:100%; max-height:400px; object-fit:contain; border-radius:6px; display:block; background:#4e4e55; }
+.xb-comic-dialog label { display:block; margin:8px 0; font-size:13px; font-weight:500; color:#d8d8e6; }
+.xb-comic-dialog textarea,.xb-comic-dialog select,.xb-comic-dialog input { display:block; width:100%; box-sizing:border-box; color:#fff; background:#424246; border:1px solid #616168; padding:8px; border-radius:8px; font:13px/1.5 monospace,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif; outline:none; box-shadow:none; }
+.xb-comic-dialog textarea:focus-visible,.xb-comic-dialog select:focus-visible,.xb-comic-dialog input:focus-visible,.xb-comic-dialog button:focus-visible { outline:2px solid #d4d4ec; }
 .xb-comic-dialog textarea { resize:vertical; }
-.xb-comic-dialog fieldset { margin:10px 0; padding:10px; border:1px solid #777; }
-.xb-comic-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:35vh; overflow:auto; font-size:12px; }
-.xb-comic-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+.xb-comic-dialog fieldset { margin:8px 0; padding:12px; border:1px solid #616168; border-radius:8px; background:#4e4e55; min-width:0; }
+.xb-comic-dialog details { margin-top:4px; padding:4px 8px; border:1px solid #616168; border-radius:8px; background:#424246; }
+.xb-comic-dialog summary { font-size:14px; font-weight:600; color:#fff; cursor:pointer; padding:6px 0; }
+.xb-comic-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:35vh; overflow:auto; font:12px/1.5 monospace; color:#fff; }
+.xb-comic-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0; }
 .xb-comic-actions h3 { flex:1; }
-.xb-comic-actions button { padding:7px 14px; border-radius:5px; border:1px solid #888; background:var(--SmartThemeQuoteColor,#333); color:inherit; cursor:pointer; }
-.xb-comic-actions button:disabled { opacity:.5; cursor:wait; }
-.xb-comic-status { min-height:1.5em; overflow-wrap:anywhere; }
-@media(max-width:700px) { .xb-comic-columns { grid-template-columns:1fr; } .xb-comic-preview { max-height:35vh; } }
+.xb-comic-actions button { padding:4px 12px; border-radius:8px; border:0; background:#616168; color:#fff; cursor:pointer; font:500 12px/16px "Noto Sans SC","Microsoft YaHei",system-ui,sans-serif; box-shadow:none; }
+.xb-comic-actions button:hover { background:#6c6c74; }
+.xb-comic-actions button:disabled { opacity:.5; cursor:not-allowed; }
+.xb-comic-status { min-height:1.5em; overflow-wrap:anywhere; color:#9292a2; }
+.xb-comic-dialog,.xb-comic-dialog textarea,.xb-comic-dialog pre { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.22) transparent; }
+.xb-comic-dialog::-webkit-scrollbar,.xb-comic-dialog textarea::-webkit-scrollbar,.xb-comic-dialog pre::-webkit-scrollbar { width:6px; height:6px; }
+.xb-comic-dialog::-webkit-scrollbar-track,.xb-comic-dialog textarea::-webkit-scrollbar-track,.xb-comic-dialog pre::-webkit-scrollbar-track { background:transparent; }
+.xb-comic-dialog::-webkit-scrollbar-thumb,.xb-comic-dialog textarea::-webkit-scrollbar-thumb,.xb-comic-dialog pre::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.22); border-radius:3px; }
+.xb-comic-dialog::-webkit-scrollbar-thumb:hover,.xb-comic-dialog textarea::-webkit-scrollbar-thumb:hover,.xb-comic-dialog pre::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.42); }
+@media(max-width:768px) { .xb-comic-dialog { padding:16px; } .xb-comic-columns { grid-template-columns:1fr; } .xb-comic-preview { max-height:280px; } }
+
+/* Image card folding keeps existing card selectors and actions intact. */
+.xb-image-fold > summary { cursor:pointer; padding:8px 12px; font-size:13px; border-radius:8px; background:rgba(128,128,128,.12); }
+.xb-image-fold > summary .xb-image-open-label { display:none; }
+.xb-image-fold[open] > summary .xb-image-open-label { display:inline; }
+.xb-image-fold[open] > summary .xb-image-closed-label { display:none; }

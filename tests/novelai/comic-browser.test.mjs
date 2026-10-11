@@ -25,7 +25,7 @@ async function harness() {
   if(url==='/') {res.setHeader('Content-Type','text/html');res.end('<!doctype html><html><head><link rel="stylesheet" href="'+prefix+'style.css"></head><body></body></html>');return;}
   const file=path.resolve(root,decodeURIComponent(url.slice(prefix.length)));
   if(host[url]) {res.setHeader('Content-Type','text/javascript');res.end(host[url]);return;}
-  if(url.startsWith(prefix)&&file.startsWith(root+path.sep)&&fs.existsSync(file)) {res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');res.end(fs.readFileSync(file));return;}
+  if(url.startsWith(prefix)&&file.startsWith(root+path.sep)&&fs.existsSync(file)) {res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'text/javascript');res.end(fs.readFileSync(file));return;}
   res.statusCode=404;res.end(url);
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -232,4 +232,68 @@ test('deleting an unselected version preserves selection; legacy last deletion r
   assert.equal(result.selected,'img-a');assert.equal(result.saved.imgId,'img-a');
   assert.match(result.body,/\[image:slot-test\]/);assert.equal(result.legacySaved,null);
  }finally{await h.close();}
+});
+
+
+test('three prompt group UI retains drafts per preset/model, exports structure and restores defaults',async()=>{
+ const h=await harness();
+ try {
+  await h.page.route('https://**/*',route=>route.abort());
+  await h.page.route('**/draw-usage.js',route=>route.fulfill({contentType:'text/javascript',body:''}));
+  await h.page.evaluate(prefix=>{const f=document.createElement('iframe');f.id='settings-test';f.src=prefix+'modules/draw/providers/novelai/novel-draw.html';f.style.cssText='width:100%;height:850px';document.body.append(f);window.addEventListener('message',e=>{window.lastSettingsMessage=e.data;});},prefix);
+  const f=h.page.frameLocator('#settings-test');
+  await f.locator('[data-add-prompt="topSystem"]').waitFor({state:'attached'});
+  const actual=h.page.frames().find(frame=>frame.url().includes('novel-draw.html'));
+  await actual.waitForLoadState('domcontentloaded');
+  const {getNovelModelCapabilitiesForUi}=await import('../../modules/draw/providers/novelai/novel-model-capabilities.js');
+  await actual.evaluate(capabilities=>{state.modelCapabilities=capabilities;state.promptPresets=[{id:'a',name:'A',topSystem:'原文',sceneRules:'规则',modelGuideOverrides:{}},{id:'b',name:'B',topSystem:'另一预设',sceneRules:'另一规则',modelGuideOverrides:{}}];state.selectedPromptPresetId='a';state.modelGuideDefaults={'v4.5':'默认指南',v5:'V5指南'};applyStateToUI();switchView('prompts');},getNovelModelCapabilitiesForUi());
+  await f.locator('[data-add-prompt="topSystem"]').click();
+  await f.locator('#nd_prompt_system_group input').last().fill('新增标题');
+  await f.locator('#nd_prompt_system_group textarea').last().fill('新增正文');
+  await f.locator('#nd_collapse_images').check();
+  await f.locator('#nd_prompt_preset_save').click();
+  await h.page.waitForFunction(()=>window.lastSettingsMessage?.type==='SAVE_PROMPT_PRESET');
+  const saved=await h.page.evaluate(()=>window.lastSettingsMessage.promptDraft);
+  assert.equal(saved.promptGroups.topSystem.length,2);assert.equal(saved.collapseImages,true);assert.match(saved.topSystem,/新增标题\n新增正文/);
+  await actual.evaluate(()=>{state.selectedPromptPresetId='b';applyPromptPreset();state.selectedPromptPresetId='a';applyPromptPreset();});
+  assert.equal(await f.locator('#nd_prompt_system_group input').last().inputValue(),'新增标题');
+  assert.equal(await f.locator('#nd_prompt_system_group textarea').last().inputValue(),'新增正文');
+  const ordered=await actual.evaluate(()=>Boolean(document.querySelector('#view-prompts .preset-bar').compareDocumentPosition(document.querySelector('#view-prompts fieldset')) & Node.DOCUMENT_POSITION_FOLLOWING));assert.equal(ordered,true);
+  await f.locator('#nd_prompt_system_group button').last().click();assert.equal(await f.locator('#nd_prompt_system_group textarea').count(),1);
+  await actual.evaluate(()=>{document.getElementById('nd_model_sel').value='custom';document.getElementById('nd_model').value='nai-diffusion-4-5-full';applyModelGuideForCurrentModel();});
+  await f.locator('[data-add-prompt="modelGuide"]').click();
+  await f.locator('#nd_prompt_guide_group input').last().fill('V45标题');
+  await f.locator('#nd_prompt_guide_group textarea').last().fill('V45内容');
+  await actual.evaluate(()=>{document.getElementById('nd_model_sel').value='custom';document.getElementById('nd_model').value='nai-diffusion-5-full';applyModelGuideForCurrentModel();});
+  assert.equal(await f.locator('#nd_prompt_guide_group textarea').first().inputValue(),'V5指南');
+  await actual.evaluate(()=>{document.getElementById('nd_model').value='nai-diffusion-4-5-full';applyModelGuideForCurrentModel();});
+  assert.equal(await f.locator('#nd_prompt_guide_group input').last().inputValue(),'V45标题');
+  await f.locator('#nd_prompt_reset_guide').click();assert.equal(await f.locator('#nd_prompt_guide_group textarea').count(),1);
+  assert.equal(await f.locator('#nd_prompt_guide_group textarea').inputValue(),'默认指南');
+  await actual.evaluate(saved=>{state.promptPresets[0]={...state.promptPresets[0],...saved};promptGroupDrafts.clear();promptTextDraftsByPreset.clear();applyPromptPreset();},saved);
+  assert.equal(await f.locator('#nd_prompt_system_group input').last().inputValue(),'新增标题');
+  assert.equal(await f.locator('#nd_prompt_system_group textarea').last().inputValue(),'新增正文');
+  assert.equal(await f.locator('#nd_collapse_images').isChecked(),true);
+
+ } finally {await h.close();}
+});
+
+test('image folding survives rerender, saved fallback and IndexedDB reload',async()=>{
+ const h=await harness();
+ try {
+  const result=await h.page.evaluate(async prefix=>{
+   window.ctx={chatId:'fold-chat',chat:[{mes:'正文[image:fold-slot]',swipe_id:0}]};
+   const gallery=await import(prefix+'modules/draw/shared/gallery-cache.js');
+   const common=await import(prefix+'modules/draw/shared/draw-common.js');
+   await gallery.storePreview({imgId:'fold-img',slotId:'fold-slot',messageId:0,savedUrl:'/saved.png',collapseImages:true});
+   await common.syncDrawSavedFromPreview(0,await gallery.getPreview('fold-img'));
+   document.body.innerHTML='<div id="chat"><div class="mes" mesid="0"><div class="mes_text">正文[image:fold-slot]</div></div></div>';
+   await common.renderPreviewsForMessage(0);const fold=document.querySelector('.xb-image-fold');const initial=fold.open;fold.open=true;
+   await common.renderPreviewsForMessage(0,{refreshSlotIds:['fold-slot']});const after=document.querySelector('.xb-image-fold').open;
+   return {initial,after,saved:common.getDrawSavedEntry(window.ctx.chat[0],'fold-slot').collapseImages};
+  },prefix);
+  assert.deepEqual(result,{initial:false,after:true,saved:true});
+  await h.page.reload();
+  assert.equal(await h.page.evaluate(async prefix=>(await(await import(prefix+'modules/draw/shared/gallery-cache.js')).getPreview('fold-img')).collapseImages,prefix),true);
+ } finally {await h.close();}
 });
