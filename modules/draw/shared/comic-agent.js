@@ -1,6 +1,5 @@
 import { resolveDrawAgentContext } from './draw-agent.js';
 import { appendDrawLog } from './scene-planner-debug.js';
-import { compileComicRules } from './comic-planning.js';
 import { parseRerollResponse } from './comic-protocol.js';
 
 export async function callComicText(messages, { signal, timeout = 120000, context, operation = '生成描述' } = {}) {
@@ -64,7 +63,7 @@ function buildPageRerollReference(comic, pageNo, currentPlanning, currentImage) 
 
 export async function rewriteComic(comic, requirement, options = {}) {
     const request = buildPageRerollRequest(comic.page, comic, comic.planning, comic.image, requirement);
-    const rules = comic.ruleMessages || compileComicRules(0);
+    const rules = comic.ruleMessages || [];
     const response = await callComicText([...rules,
         ...(comic.guide ? [{ role: 'system', content: comic.guide }] : []),
         ...(comic.worldInfo ? [{ role: 'system', content: comic.worldInfo }] : []),

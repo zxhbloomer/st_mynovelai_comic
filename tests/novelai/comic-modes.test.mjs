@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseImageBlock, serializeSectionImageProtocol } from '../../modules/draw/shared/comic-protocol.js';
-import { createComicTasks, compileComicRules } from '../../modules/draw/shared/comic-planning.js';
+import { createComicTasks, buildComicMessages } from '../../modules/draw/shared/comic-planning.js';
 import { compileNovelPromptForTask, buildNovelAIRequestBody } from '../../modules/draw/providers/novelai/compiler.js';
 import { parseNovelPromptPresetImport } from '../../modules/draw/providers/novelai/novel-prompt-import.js';
 const image = `@page
@@ -44,9 +44,14 @@ test('comic compilation preserves punctuation, bypasses character library and ob
   assert.equal(buildNovelAIRequestBody({...p,useCoords:true,params,seed:1}).parameters.use_coords,true);
  }
 });
-test('rules compile reference macros locally without unresolved variables; mode persists in imported preset',()=>{
- const rules=compileComicRules(2); assert.ok(rules.length); assert.ok(rules.some(x=>x.content.includes('@page')));
- assert.ok(rules.every(x=>!x.content.includes('{{')));
+test('comic messages use configured rules only and preserve mode protocol; mode persists in imported preset',()=>{
+ for (const mode of ['inline','end']) {
+  const messages=buildComicMessages({source:'正文',mode,maxImages:2,opening:'用户全彩',guide:'用户模型指南',rules:'用户分镜'});
+  assert.equal(messages.length,3);assert.equal(messages[0].content,'用户全彩');
+  assert.match(messages[1].content,/用户模型指南/);assert.match(messages[1].content,/用户分镜/);
+  assert.match(messages[1].content,/@page/);assert.match(messages[1].content,/最多输出 2/);
+  assert.doesNotMatch(messages.map(m=>m.content).join('\n'),/黑白脱色|少年热血|天地出血|COMIC-DIRECTOR/);
+ }
  const payload={_type:'novel-draw-prompt-template',_version:3,topSystem:'',sceneRules:'',imageMode:'inline'};
  assert.equal(parseNovelPromptPresetImport(payload).imageMode,'inline');
  assert.equal(parseNovelPromptPresetImport({...payload,imageMode:undefined}).imageMode,'points');
