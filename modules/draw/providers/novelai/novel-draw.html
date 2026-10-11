@@ -1199,6 +1199,13 @@ select.input { cursor: pointer; }
                  提示词模板
                  ═══════════════════════════════════════════════════════════════ -->
             <div id="view-prompts" class="view">
+                <fieldset class="card" style="display:grid;gap:10px;">
+                    <legend class="card-title">生图规则</legend>
+                    <label><input type="radio" name="nd_image_mode" value="points" checked> ① llm插图点生图（图片无法 AI 改写）</label>
+                    <label><input type="radio" name="nd_image_mode" value="inline"> ② llm文章中生图（包含插图提示词，可ai修改生图）</label>
+                    <label><input type="radio" name="nd_image_mode" value="end"> ③ llm文章末尾（包含插图提示词，可ai修改生图）</label>
+                    <p class="form-hint">跟随提示词预设保存。②③的完整生成描述随图片保存，正文只显示图片。</p>
+                </fieldset>
                 <div class="view-header">
                     <h2 class="view-title">提示词模板</h2>
                     <p class="view-desc">自定义场景分析的 LLM 提示词模板</p>
@@ -1277,7 +1284,7 @@ select.input { cursor: pointer; }
                         <div class="card-title"><i class="fa-solid fa-link"></i> 请求结构</div>
                         <span class="chain-toggle-icon" aria-hidden="true"></span>
                     </summary>
-                    <p class="form-hint">实际请求由 1 条 system、1 条 user 和 1 个工具组成；点击各段查看内容，工具一节列出模型读到的字段说明。</p>
+                    <p class="form-hint">①使用插图点工具；②③使用完整漫画文本协议。点击各段查看当前模式的请求内容。</p>
                     <div id="nd_prompt_chain" class="prompt-chain-container"></div>
                 </details>
 
@@ -1594,6 +1601,7 @@ function requestPromptChainPreview() {
         promptDraft: {
             topSystem: $('nd_prompt_system')?.value || '',
             sceneRules: $('nd_prompt_format')?.value || '',
+            imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
             modelGuideOverrides: collectModelGuideOverridesFromForm(),
         },
     });
@@ -2772,6 +2780,7 @@ function applyPromptPreset() {
     $('nd_prompt_format').value = drafts?.has('sceneRules')
         ? drafts.get('sceneRules')
         : active.sceneRules ?? '';
+    document.querySelectorAll('[name=nd_image_mode]').forEach(input => { input.checked = input.value === (drafts?.get('imageMode') || active.imageMode || 'points'); });
     applyModelGuideForCurrentModel();
 }
 
@@ -3505,6 +3514,7 @@ document.addEventListener('DOMContentLoaded', () => {
         postToParent({ type: 'SAVE_PROMPT_PRESET', selectedPromptPresetId: state.selectedPromptPresetId, promptDraft: {
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
+            imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
             modelGuideOverrides: collectModelGuideOverridesFromForm(),
         }, statusTarget: 'prompt-preset' });
     });
@@ -3536,6 +3546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         postToParent({ type: 'SAVE_PROMPT_PRESET', selectedPromptPresetId: state.selectedPromptPresetId, promptDraft: {
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
+            imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
             modelGuideOverrides: collectModelGuideOverridesFromForm(),
         }, statusTarget: 'prompts' });
     });
@@ -3595,6 +3606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: activePreset.name || '',
             topSystem: $('nd_prompt_system').value,
             sceneRules: $('nd_prompt_format').value,
+            imageMode: document.querySelector('[name=nd_image_mode]:checked')?.value || 'points',
             modelGuideOverrides: collectModelGuideOverridesFromForm(),
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -3626,6 +3638,10 @@ document.addEventListener('DOMContentLoaded', () => {
     $('nd_prompt_chain_details').addEventListener('toggle', (event) => {
         if (event.currentTarget.open) requestPromptChainPreview();
     });
+    document.querySelectorAll('[name=nd_image_mode]').forEach(input => input.addEventListener('change', () => {
+        setCurrentPromptTextDraft('imageMode', input.value);
+        if ($('nd_prompt_chain_details').open) requestPromptChainPreview();
+    }));
     ['nd_prompt_system', 'nd_prompt_format'].forEach((id) => {
         $(id).addEventListener('input', () => {
             setCurrentPromptTextDraft(id === 'nd_prompt_system' ? 'topSystem' : 'sceneRules', $(id).value);

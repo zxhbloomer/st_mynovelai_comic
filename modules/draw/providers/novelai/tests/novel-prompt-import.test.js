@@ -58,6 +58,7 @@ test('round-trips the current V2 optional model guide overrides', () => {
     });
 
     assert.deepEqual(result, {
+        imageMode: 'points',
         name: 'current preset',
         topSystem: 'system',
         sceneRules: 'rules',
@@ -83,6 +84,7 @@ test('ignores the retired V3 model-contract overrides instead of carrying them i
     });
 
     assert.deepEqual(result, {
+        imageMode: 'points',
         name: 'advanced preset',
         topSystem: 'system',
         sceneRules: 'rules',

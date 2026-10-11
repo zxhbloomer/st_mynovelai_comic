@@ -1,3 +1,7 @@
+import { startComicJobRecovery } from '../../shared/comic-job-recovery.js';
+import { getPendingImageJobSlots } from '../../shared/pending-image-jobs.js';
+import { normalizeComicMode, buildComicMessages, createComicTasks } from '../../shared/comic-planning.js';
+import { callComicText } from '../../shared/comic-agent.js';
 // novel-draw.js
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -115,6 +119,8 @@ import {
 } from "../../shared/danbooru-local-db.js";
 import {
     clearDrawSavedEntry,
+    getDrawSavedEntry,
+    getDrawImageRecord,
     syncDrawSavedFromPreview,
     syncDrawSavedAfterDeletion,
     startSharedDrawPreviewRuntime,
@@ -133,12 +139,12 @@ import { replaceSceneSlotElements } from "../../shared/scene-slot-dom.js";
 import { createSceneSource, normalizeMessageSceneSourceText } from "../../shared/scene-source.js";
 import { createDrawImageSlotRegex, stripDrawImageSlots } from "../../shared/image-marker-syntax.js";
 import { ScenePlacementError, assertSceneSourceUnchanged } from "../../shared/scene-placement.js";
-import { submitPreparedChatImages, registerPreparedImageProvider } from "../../shared/prepared-chat-images.js";
+import { submitPreparedChatImages, registerPreparedImageProvider, generatePreparedChatImages } from "../../shared/prepared-chat-images.js";
 import { prepareImageInput } from '../../shared/prepared-image-input.js';
 import { acquireFloorImageJob, getFloorImageJob, getFloorImageJobs, getFloorImagePhase, getFloorImageState, releaseFloorImageJob, observeFloorImageJob, failFloorImageJob, clearFloorImageJobs, resolveFloorImageJobTarget, rebaseFloorImageJobsAfterSwipeDeletion } from '../../shared/floor-image-job.js';
 import { createImageRequestAttempt, imageHttpFailure, withImageRequestOutcome, ImageRequestOutcome } from '../../shared/image-request-outcome.js';
 import { createImageCardRedrawProvider } from "../../shared/image-card-redraw-provider.js";
-import { redrawImageCard, removeChatImageSlot, restoreImageCard } from "../../shared/image-card-actions.js";
+import { redrawImageCard, removeChatImageSlot, restoreImageCard, deleteImageVersion } from "../../shared/image-card-actions.js";
 import { persistCardTagEdits } from "../../shared/card-tag-editor.js";
 import { hasPreviewImage, DRAW_SLOT_COPY } from "../../shared/image-record.js";
 // ═══════════════════════════════════════════════════════════════════════════
@@ -848,6 +854,7 @@ function normalizeSettings(saved = {}) {
             sceneRules: typeof preset.sceneRules === 'string'
                 ? preset.sceneRules
                 : DEFAULT_PROMPT_CONFIG.sceneRules,
+            imageMode: normalizeComicMode(preset.imageMode),
             modelGuideOverrides: normalizeNovelPromptGuideOverrides(preset.modelGuideOverrides),
         };
     });
@@ -2149,7 +2156,9 @@ async function handleDelegatedClick(e) {
             break;
         case 'edit-tags':
             container.querySelector('.xb-nd-menu-wrap')?.classList.remove('open');
-            toggleEditPanel(container, true);
+            try {
+                if (!await maybeOpenComicEditor(container)) await toggleEditPanel(container, true);
+            } catch (error) { globalThis.toastr?.error(error.message); }
             break;
         case 'save-tags':
             await saveEditedTags(container);
@@ -2202,6 +2211,7 @@ async function handleImageClick(container) {
     const slotId = container.dataset.slotId;
     const messageId = parseInt(container.dataset.mesid);
     await openGallery(slotId, messageId, {
+        deleteVersion: imgId => deleteImageVersion({ imgId, slotId, messageId }),
         onUse: (sid, msgId, selected, historyCount) => {
             const cont = document.querySelector(`.xb-nd-img[data-slot-id="${sid}"]`);
             if (cont) {
@@ -2249,6 +2259,10 @@ async function handleImageClick(container) {
         onBecameEmpty: (sid, msgId, lastImageInfo) => {
             const cont = document.querySelector(`.xb-nd-img[data-slot-id="${sid}"]`);
             if (!cont) return;
+            if (lastImageInfo.comic) {
+                void removeChatImageSlot(cont).catch(error => showToast(error.message, 'error'));
+                return;
+            }
             const failedHtml = buildFailedPlaceholderHtml({
                 slotId: sid,
                 messageId: msgId,
@@ -2273,6 +2287,36 @@ function renderCardTagFields(tags, characters = []) {
         <div class="xb-nd-edit-group-label">👤 ${escapeHtml(character.name || `角色 ${index + 1}`)}</div>
         <textarea class="xb-nd-edit-input" data-type="char" data-index="${index}">${escapeHtml(character.prompt || '')}</textarea>
     </div>`).join('');
+}
+
+
+async function maybeOpenComicEditor(container) {
+    const message = getContext().chat?.[Number(container.dataset.mesid)];
+    const record = await getDrawImageRecord(message, container.dataset.slotId, container.dataset.imgId);
+    if (!record?.comic) {
+        if (/^\s*@(?:page|position)\b/i.test(record?.tags || '')) throw new Error('完整图片描述已丢失，无法恢复 AI 编辑');
+        return false;
+    }
+    const { openComicEditor } = await import('../../shared/comic-editor.js');
+    await openComicEditor({ container,
+        previewRequest: comic => {
+            const settings = cloneSettingsObject(getRuntimeSettings());
+            const preset = cloneSettingsObject(getActiveParamsPreset());
+            const compiled = compileNovelScenePlan([{ scene: comic.image, comic }], createNovelGenerationRecipe({
+                settings, preset, itemCount: 1, resolveForBackend: resolveNovelImageTransport(settings) !== 'frontend',
+            }));
+            return compiled.items[0].request.payload;
+        },
+        render: () => renderSharedPreviewsForMessage(getContext().chat.indexOf(message), { refreshSlotIds: [container.dataset.slotId] }),
+        redraw: async (selected, comic) => {
+            const ctx = getContext(), messageId = ctx.chat.indexOf(message);
+            return generatePreparedChatImages('novelai', { ctx, message, messageId,
+                sourceText: message.mes, swipeIndex: message.swipe_id ?? 0,
+                plannerSourceText: comic.sourceText, plannerSourceOrigin: 'captured',
+                tasks: [{ scene: comic.image, comic, placement: { mode: 'existing', slotId: selected.slotId } }] });
+        },
+    });
+    return true;
 }
 
 async function toggleEditPanel(container, show) {
@@ -2405,9 +2449,13 @@ async function deleteCurrentImage(container) {
     if (!confirm('确定删除这张图片吗？')) return;
 
     try {
-        await deletePreview(imgId);
-        const previews = await getPreviewsBySlot(slotId);
+        const { record: deletedRecord, previews } = await deleteImageVersion({ imgId, slotId, messageId });
         const successPreviews = previews.filter(hasPreviewImage);
+        if (deletedRecord?.comic) {
+            await renderSharedPreviewsForMessage(messageId, { refreshSlotIds: [slotId] });
+            showToast('图片及对应描述已删除');
+            return;
+        }
 
         if (successPreviews.length > 0) {
             const latest = successPreviews[0];
@@ -2617,7 +2665,75 @@ async function buildNovelScenePlannerOptions({
     };
 }
 
+
+async function buildComicSourceTasks({ sourceText, settings, preset, signal, onStateChange, useWorldbook = true }) {
+    const prompt = getActivePromptPreset(settings) || {};
+    const mode = normalizeComicMode(prompt.imageMode);
+    let worldInfo = '';
+    if (useWorldbook && settings.worldbooks?.enabled) {
+        const processor = new WorldbookProcessor();
+        worldInfo = processor.processFromEntries({
+            entries: (settings.worldbooks.uploadedBooks || []).flatMap(book => book.entries || []),
+            contextText: sourceText, keywordFilterMode: settings.worldbooks.keywordFilterMode || 'auto',
+        });
+    }
+    if (useWorldbook && settings.useWorldInfo) {
+        const { getWorldInfoPrompt } = await import('../../../../../../../../scripts/world-info.js');
+        const info = await getWorldInfoPrompt([sourceText], 8192, true, { trigger: 'normal' });
+        worldInfo = [worldInfo, info.worldInfoBefore, info.worldInfoAfter,
+            ...(info.worldInfoDepth || []).flatMap(entry => entry.entries || [])].filter(Boolean).join('\n\n');
+    }
+    const guide = getEffectiveNovelModelGuide(preset.params?.model, prompt);
+    const messages = buildComicMessages({ source: sourceText, mode, maxImages: preset.maxImages || 0,
+        opening: prompt.topSystem, guide, rules: prompt.sceneRules, worldInfo });
+    onStateChange?.('llm', { phase: 'analysis', label: '生成完整图片描述' });
+    const response = await callComicText(messages, { signal });
+    const tasks = createComicTasks({ source: sourceText, response, mode, maxImages: preset.maxImages || 0 });
+    for (const task of tasks) {
+        task.comic.ruleMessages = messages.filter(message => message.role === 'system');
+        task.comic.guide = guide;
+        task.comic.worldInfo = worldInfo;
+    }
+    return tasks;
+}
+
+async function generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange }) {
+    const sourceText = message.mes;
+    const swipeIndex = message.swipe_id ?? 0;
+    const existing = [];
+    const pendingSlots = await getPendingImageJobSlots();
+    for (const slotId of extractSlotIds(sourceText)) {
+        if (pendingSlots.has(slotId)) throw new Error('该楼层已有后台图片任务，等待完成或接回，不重复提交');
+        const record = await getDrawImageRecord(message, slotId);
+        if (record?.comic) existing.push({ slotId, record });
+        else if (/^\s*@(?:page|position)\b/i.test(record?.tags || '')) throw new Error('图片完整描述已丢失，无法补图；请重新建立配图任务');
+    }
+    let tasks;
+    if (existing.length) {
+        tasks = existing.filter(({ record }) => !hasPreviewImage(record)).map(({ slotId, record }) => ({
+            scene: record.comic.draft?.image || record.comic.image,
+            comic: { ...record.comic, ...(record.comic.draft || {}), draft: undefined },
+            placement: { mode: 'existing', slotId },
+        }));
+        if (!tasks.length) {
+            onStateChange?.('success', { success: 0, total: 0 });
+            return { success: 0, total: 0, existing: true };
+        }
+    } else {
+        job.phase = 'llm';
+        tasks = await buildComicSourceTasks({ sourceText, settings, preset,
+            signal: job.controller.signal, onStateChange });
+    }
+    job.controller.signal.throwIfAborted();
+    if (message.mes !== sourceText || (message.swipe_id ?? 0) !== swipeIndex) throw new Error('正文或消息分支已变化，未开始绘图');
+    return runPreparedNovelSlots({ ctx, message, messageId, sourceText, tasks, settings, preset,
+        job, onStateChange, swipeIndex, plannerSourceText: tasks[0].comic.sourceText, plannerSourceOrigin: 'captured' });
+}
+
 async function buildTextSourceTasks(options) {
+    if (normalizeComicMode(getActivePromptPreset(options.settings)?.imageMode) !== 'points') {
+        return buildComicSourceTasks({ ...options, sourceText: options.sceneSource.sourceText });
+    }
     return generateAndParseScenePlan(await buildNovelScenePlannerOptions(options));
 }
 
@@ -2697,6 +2813,7 @@ async function generateImagesFromText(options = {}) {
             return {
                 task,
                 slotId: generateSlotId(),
+                ...(task.comic ? { imgId: generateImgId() } : {}),
                 scene,
                 characterPrompts,
                 tagsForStore: task.scene || '',
@@ -2707,10 +2824,18 @@ async function generateImagesFromText(options = {}) {
                     scene,
                     characterPrompts,
                     negativePrompt,
+                    useCoords: promptData.useCoords,
                     params: preset.params || {},
                 },
             };
         });
+        for (const item of batchItems) if (item.task.comic) {
+            await storePreview({ ...galleryMeta, imgId: item.imgId, slotId: item.slotId, messageId,
+                tags: item.tagsForStore, positive: item.scene, comic: item.task.comic,
+                status: 'pending', generationSnapshot: item.generationSnapshot,
+                plannerSourceText: text, plannerSourceOrigin: 'captured',
+                characterPrompts: item.characterPrompts, negativePrompt: item.negativePrompt });
+        }
         const batchResult = await runNovelImageBatch({
             requests: batchItems.map(item => item.request),
             compiledBatch,
@@ -2720,7 +2845,7 @@ async function generateImagesFromText(options = {}) {
             onStateChange: options.onStateChange,
             onItemReady: async ({ index, base64 }) => {
                 const item = batchItems[index];
-                const imgId = generateImgId();
+                const imgId = item.imgId || generateImgId();
                 await storePreview({
                     ...galleryMeta,
                     imgId,
@@ -2729,6 +2854,7 @@ async function generateImagesFromText(options = {}) {
                     base64,
                     tags: item.tagsForStore,
                     positive: item.scene,
+                    ...(item.task.comic ? { comic: item.task.comic } : {}),
                     generationSnapshot: item.generationSnapshot,
                     plannerSourceText: text,
                     plannerSourceOrigin: 'captured',
@@ -2755,11 +2881,13 @@ async function generateImagesFromText(options = {}) {
                 const errorType = classifyError(error);
                 await storeFailedPlaceholder({
                     ...galleryMeta,
+                    ...(item.imgId ? { imgId: item.imgId } : {}),
                     slotId: item.slotId,
                     messageId,
                     tags: item.tagsForStore,
                     positive: item.scene,
                     errorType: errorType.code,
+                    ...(item.task.comic ? { comic: item.task.comic } : {}),
                     generationSnapshot: item.generationSnapshot,
                     plannerSourceText: text,
                     plannerSourceOrigin: 'captured',
@@ -2797,6 +2925,7 @@ async function generateImagesFromText(options = {}) {
 }
 
 let preparedImageDispose = null;
+let comicRecoveryDispose = null;
 
 async function runPreparedNovelSlots(input) {
     const { ctx, message, messageId, sourceText, tasks, onStateChange } = input;
@@ -2805,7 +2934,7 @@ async function runPreparedNovelSlots(input) {
         const { settings, preset } = resolveNovelRedrawConfig(
             input.settings || cloneSettingsObject(getRuntimeSettings()),
             input.preset || cloneSettingsObject(getActiveParamsPreset()),
-            input.generationSnapshot,
+            tasks.some(task => task.comic) ? null : input.generationSnapshot,
         );
         const recipe = createNovelGenerationRecipe({
             settings,
@@ -2856,6 +2985,10 @@ async function generateAndInsertImages({
         const signal = job.controller.signal;
         const settings = cloneSettingsObject(getRuntimeSettings());
         const preset = cloneSettingsObject(getActiveParamsPreset());
+
+        if (normalizeComicMode(getActivePromptPreset(settings)?.imageMode) !== 'points') {
+            return await generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange });
+        }
 
         const filterRules = settings.messageFilterRules?.length
             ? settings.messageFilterRules
@@ -3444,6 +3577,7 @@ async function handleFrameMessage(event) {
                     name: (typeof data.name === 'string' && data.name.trim()) ? data.name.trim() : `提示词-${settings.promptPresets.length + 1}`,
                     topSystem: current?.topSystem ?? DEFAULT_PROMPT_CONFIG.topSystem,
                     sceneRules: current?.sceneRules ?? DEFAULT_PROMPT_CONFIG.sceneRules,
+                    imageMode: 'points',
                     modelGuideOverrides: normalizeNovelPromptGuideOverrides(current?.modelGuideOverrides),
                 };
                 settings.promptPresets.push(newPreset);
@@ -3543,6 +3677,7 @@ async function handleFrameMessage(event) {
                     const cp = data.promptDraft;
                     if ('topSystem' in cp) current.topSystem = cp.topSystem;
                     if ('sceneRules' in cp) current.sceneRules = cp.sceneRules;
+                    if ('imageMode' in cp) current.imageMode = normalizeComicMode(cp.imageMode);
                     if ('modelGuideOverrides' in cp) {
                         current.modelGuideOverrides = compactPromptGuideOverrides(cp.modelGuideOverrides);
                     }
@@ -3689,6 +3824,8 @@ async function handleFrameMessage(event) {
             const currentPrompts = getActivePromptPreset() || {};
             const model = String(data.model || getActiveParamsPreset()?.params?.model || '');
             const promptDraft = {
+                ...currentPrompts,
+                ...data.promptDraft,
                 modelGuideOverrides: normalizeNovelPromptGuideOverrides(
                     data.promptDraft?.modelGuideOverrides ?? currentPrompts.modelGuideOverrides,
                 ),
@@ -3696,7 +3833,13 @@ async function handleFrameMessage(event) {
             if (iframe?.isConnected) postToIframe(iframe, {
                 type: 'PROMPT_CHAIN_DATA',
                 requestId: data.requestId,
-                chain: getPromptChainPreview(promptDraft, model),
+                chain: normalizeComicMode(promptDraft.imageMode) === 'points' ? getPromptChainPreview(promptDraft, model)
+                    : buildComicMessages({ source: '目标正文将在生成时读取', mode: normalizeComicMode(promptDraft.imageMode),
+                        maxImages: getActiveParamsPreset()?.maxImages || 0, opening: promptDraft.topSystem,
+                        guide: getEffectiveNovelModelGuide(model, promptDraft), rules: promptDraft.sceneRules })
+                        .map((message, index) => ({ key: `comic-${index}`, role: message.role,
+                            summary: index === 0 ? '完整漫画描述请求（不调用插图点工具）' : '漫画规则 / 正文',
+                            sections: [{ key: `comic-content-${index}`, summary: '请求内容', content: message.content }] })),
             }, 'HuaManhua-NovelDraw');
             break;
         }
@@ -3763,7 +3906,8 @@ async function handleFrameMessage(event) {
 
         case 'DELETE_GALLERY_IMAGE': {
             try {
-                await deletePreview(data.imgId);
+                const deleted = await deleteImageVersion({ imgId: data.imgId });
+                if (deleted.messageId != null) await renderSharedPreviewsForMessage(deleted.messageId);
                 {
                     const iframe = document.getElementById('xiaobaix-novel-draw-iframe');
                     if (iframe) postToIframe(iframe, { type: 'GALLERY_IMAGE_DELETED', imgId: data.imgId }, 'HuaManhua-NovelDraw');
@@ -3890,6 +4034,17 @@ export async function initNovelDraw() {
 
     moduleInitialized = true;
     backendJobMonitors.activate();
+    comicRecoveryDispose?.();
+    comicRecoveryDispose = startComicJobRecovery({ client: imageBackendJobsClient, getContext,
+        decode: decodeNovelBackendJobResult, store: storePreview, remove: deletePreview,
+        select: setSlotSelection, clearSelection: clearSlotSelection, getPreview,
+        render: async () => {
+            const ctx = getContext();
+            for (let i = 0; i < (ctx.chat || []).length; i++) {
+                if (extractSlotIds(ctx.chat[i]?.mes).size) await renderSharedPreviewsForMessage(i);
+            }
+        },
+    });
     initAfterAiGate();
     afterAiGateDispose?.();
     afterAiGateDispose = registerAfterAiHandler(MODULE_KEY, ({ chatId, messageId }) => {
@@ -4047,6 +4202,9 @@ export async function cleanupNovelDraw() {
     overlayCreated = false;
     frameReady = false;
 
+    comicRecoveryDispose?.();
+    comicRecoveryDispose = null;
+    document.querySelector('.xb-comic-editor')?.dispatchEvent(new Event('comic-close'));
     backendJobMonitors.deactivate();
     abortGeneration(null, { reason: 'teardown' });
     clearFloorImageJobs(generationJobs);

@@ -94,6 +94,7 @@ export async function executePreparedSlots({ items, backend, store, remove, sele
                         characterName: items[0].characterName },
                     items: items.map((item, index) => ({ index, slotId: item.slotId, imgId: item.imgId, discarded: item.discarded,
                         previewMetadata: { tags: item.tags, positive: item.positive,
+                            ...(item.comic ? { comic: item.comic } : {}),
                             characterPrompts: item.characterPrompts, negativePrompt: item.negativePrompt,
                             generationSnapshot: item.generationSnapshot,
                             plannerSourceText: item.plannerSourceText,

@@ -1,3 +1,4 @@
+import { normalizeComicMode } from '../../shared/comic-planning.js';
 import { NOVEL_PROMPT_GUIDES } from './novel-model-capabilities.js';
 import { migrateLegacyNovelTagGuide } from './novel-prompt-migration.js';
 
@@ -51,6 +52,7 @@ export function parseNovelPromptPresetImport(payload, { fallbackName = '' } = {}
 
     const importedName = typeof payload.name === 'string' ? payload.name.trim() : '';
     return {
+        imageMode: normalizeComicMode(payload.imageMode),
         name: importedName || String(fallbackName || '').trim() || '导入的提示词预设',
         topSystem: payload.topSystem,
         sceneRules: payload.sceneRules,

@@ -167,6 +167,7 @@ function normalizeItem(source) {
         imgId,
         ...(source.discarded === true ? { discarded: true } : {}),
         previewMetadata: {
+            ...(metadata.comic ? { comic: JSON.parse(JSON.stringify(metadata.comic)) } : {}),
             tags: normalizeText(metadata.tags),
             positive: normalizeText(metadata.positive),
             characterPrompts: metadata.characterPrompts ?? null,

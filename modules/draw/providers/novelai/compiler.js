@@ -1,3 +1,4 @@
+import { compileComicPrompt } from '../../shared/comic-planning.js';
 import { assembleCharacterPrompts, joinTags } from '../../shared/character-prompts.js';
 import { getNovelModelCapability, isNovelV5Model } from './novel-model-capabilities.js';
 import { resolveNovelAIBackendImageApi, resolveNovelAIImageApi } from './novel-request-config.js';
@@ -47,6 +48,7 @@ export function buildNovelAIRequestBody({
     scene,
     characterPrompts = [],
     negativePrompt,
+    useCoords: explicitUseCoords,
     params = {},
     defaultParams = {},
     seed,
@@ -61,6 +63,7 @@ export function buildNovelAIRequestBody({
             scene,
             characterPrompts,
             negativePrompt,
+            useCoords: explicitUseCoords,
             params: { ...effective, model: modelName },
             seed: normalizedSeed,
         });
@@ -93,7 +96,7 @@ export function buildNovelAIRequestBody({
         };
     }
 
-    const useCoords = characterPrompts.some(prompt => (
+    const useCoords = typeof explicitUseCoords === 'boolean' ? explicitUseCoords : characterPrompts.some(prompt => (
         prompt.center && (prompt.center.x !== 0.5 || prompt.center.y !== 0.5)
     ));
     const skipCfgAboveSigma = isV45 && effective.variety_boost
@@ -157,6 +160,7 @@ export function buildNovelAIRequestBody({
 }
 
 export function compileNovelPromptForTask(task, recipe = {}) {
+    if (task?.comic) return compileComicPrompt(task.comic, recipe);
     const characterPrompts = Array.isArray(task?.characterPrompts)
         ? task.characterPrompts.filter(Boolean)
         : assembleCharacterPrompts(task?.chars || [], recipe.knownCharacters || [], { acceptGrid: false })
@@ -186,6 +190,7 @@ export function compileNovelImageRequest(request, generationRecipe, seed) {
             scene: request?.scene,
             characterPrompts: request?.characterPrompts || [],
             negativePrompt: request?.negativePrompt,
+            useCoords: request?.useCoords,
             params,
             seed,
         }),

@@ -12,11 +12,13 @@ export function prepareImageInput(provider, tasks, recipe) {
     const novel = provider === 'novelai';
     const requests = compiledBatch.artifacts.map(({ promptData }) => ({
         ...(novel ? { scene: promptData.scene } : { prompt: promptData.positive }),
+        useCoords: promptData.useCoords,
         characterPrompts: promptData.characterPrompts,
         negativePrompt: novel ? promptData.negativePrompt : promptData.negative,
         params: recipe.params,
     }));
     const metadata = compiledBatch.artifacts.map(({ task, promptData }) => ({
+        ...(task.comic ? { comic: JSON.parse(JSON.stringify(task.comic)) } : {}),
         tags: task.scene || '',
         positive: novel ? promptData.scene : promptData.positive,
         characterPrompts: promptData.characterPrompts,

@@ -429,3 +429,20 @@ body.immersive-mode .flex-container.flex1.alignitemscenter {
 #completion_prompt_manager_footer_append_prompt option[value="lwb_story_outline"] {
     display: none;
 }
+
+/* ②③ complete description editor. */
+.xb-comic-editor { position:fixed; inset:0; z-index:10020; background:#000a; display:flex; align-items:center; justify-content:center; padding:16px; }
+.xb-comic-dialog { width:min(1200px,96vw); max-height:94vh; overflow:auto; background:var(--SmartThemeBlurTintColor,#202020); color:var(--SmartThemeBodyColor,#eee); border:1px solid var(--SmartThemeBorderColor,#666); border-radius:12px; padding:18px; }
+.xb-comic-columns { display:grid; grid-template-columns:minmax(220px,1fr) minmax(320px,2fr); gap:20px; }
+.xb-comic-preview { width:100%; max-height:65vh; object-fit:contain; }
+.xb-comic-dialog label { display:block; margin:8px 0; }
+.xb-comic-dialog textarea,.xb-comic-dialog select,.xb-comic-dialog input { display:block; width:100%; box-sizing:border-box; color:inherit; background:var(--SmartThemeQuoteColor,#333); border:1px solid #777; padding:6px; border-radius:4px; }
+.xb-comic-dialog textarea { resize:vertical; }
+.xb-comic-dialog fieldset { margin:10px 0; padding:10px; border:1px solid #777; }
+.xb-comic-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:35vh; overflow:auto; font-size:12px; }
+.xb-comic-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+.xb-comic-actions h3 { flex:1; }
+.xb-comic-actions button { padding:7px 14px; border-radius:5px; border:1px solid #888; background:var(--SmartThemeQuoteColor,#333); color:inherit; cursor:pointer; }
+.xb-comic-actions button:disabled { opacity:.5; cursor:wait; }
+.xb-comic-status { min-height:1.5em; overflow-wrap:anywhere; }
+@media(max-width:700px) { .xb-comic-columns { grid-template-columns:1fr; } .xb-comic-preview { max-height:35vh; } }

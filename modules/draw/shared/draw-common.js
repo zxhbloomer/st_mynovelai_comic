@@ -2,6 +2,7 @@ import { getContext } from "../../../../../../extensions.js";
 import { DRAW_CAPSULE_COPY } from './draw-capsule-copy.js';
 import {
     getDisplayPreviewForSlot,
+    getPreview,
     getPreviewsBySlot,
     getPreviewDisplayUrl,
     subscribeGalleryCacheChanges,
@@ -429,6 +430,7 @@ function normalizeDrawSavedEntry(slotId, data = {}) {
     if (!slotId || !data?.savedUrl) return null;
     return {
         slotId,
+        ...(data.comic ? { comic: data.comic } : {}),
         imgId: data.imgId || '',
         savedUrl: data.savedUrl,
         tags: data.tags || '',
@@ -442,6 +444,15 @@ export function getDrawSavedEntry(message, slotId) {
     const current = normalizeDrawSavedEntry(slotId, getSavedMap(message, DRAW_SAVED_EXTRA_KEY)?.[slotId]);
     if (current) return current;
     return normalizeDrawSavedEntry(slotId, getSavedMap(message, LEGACY_NOVEL_SAVED_EXTRA_KEY)?.[slotId]);
+}
+
+// Read the selected version, including the chat's saved-file fallback after cache cleanup.
+export async function getDrawImageRecord(message, slotId, imgId) {
+    if (!imgId) return (await resolveRenderPreviewForSlot(message, null, slotId)).preview;
+    const record = await getPreview(imgId);
+    if (record?.slotId === slotId) return record;
+    const saved = getDrawSavedEntry(message, slotId);
+    return saved?.imgId === imgId ? { ...saved, status: PreviewStatus.SUCCESS } : null;
 }
 
 export async function setDrawSavedEntry(messageId, slotId, data) {
@@ -458,7 +469,8 @@ export async function setDrawSavedEntry(messageId, slotId, data) {
         previous.imgId === entry.imgId &&
         previous.savedUrl === entry.savedUrl &&
         previous.tags === entry.tags &&
-        previous.positive === entry.positive;
+        previous.positive === entry.positive &&
+        JSON.stringify(previous.comic) === JSON.stringify(entry.comic);
     const legacyMap = getSavedMap(message, LEGACY_NOVEL_SAVED_EXTRA_KEY);
     const hasLegacyEntry = !!legacyMap?.[slotId];
     if (unchanged && !hasLegacyEntry) return true;
@@ -502,6 +514,7 @@ export async function syncDrawSavedFromPreview(messageId, preview, overrides = {
         savedUrl: overrides.savedUrl || preview?.savedUrl,
         tags: overrides.tags ?? preview?.tags ?? '',
         positive: overrides.positive ?? preview?.positive ?? '',
+        ...(preview?.comic ? { comic: preview.comic } : {}),
     });
 }
 
@@ -539,6 +552,7 @@ async function resolveRenderPreviewForSlot(message, messageId, slotId) {
         return {
             preview: {
                 ...matchedPreview,
+                ...(savedEntry.comic ? { comic: savedEntry.comic } : {}),
                 slotId,
                 imgId: savedEntry.imgId || matchedPreview?.imgId || `saved-${slotId}`,
                 savedUrl: savedEntry.savedUrl,

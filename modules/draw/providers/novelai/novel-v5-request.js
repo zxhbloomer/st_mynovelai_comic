@@ -109,7 +109,7 @@ export function appendV5AutomaticPrompt(scene, suffixes = []) {
     return `${joinPromptParts(promptBody, automatic)}\n${textBlock}`.trim();
 }
 
-export function buildNovelV5RequestBody({ scene, characterPrompts = [], negativePrompt, params = {}, seed }) {
+export function buildNovelV5RequestBody({ scene, characterPrompts = [], negativePrompt, useCoords = true, params = {}, seed }) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) {
         throw new NovelV5RequestError('NovelAI V5 params 必须是对象');
     }
@@ -197,7 +197,7 @@ export function buildNovelV5RequestBody({ scene, characterPrompts = [], negative
             add_original_image: true,
             cfg_rescale: cfgRescale,
             legacy_v3_extend: false,
-            use_coords: true,
+            use_coords: useCoords,
             legacy_uc: false,
             normalize_reference_strength_multiple: true,
             inpaintImg2ImgStrength: 1,
@@ -215,7 +215,7 @@ export function buildNovelV5RequestBody({ scene, characterPrompts = [], negative
                     base_caption: basePrompt,
                     char_captions: charCaptions,
                 },
-                use_coords: true,
+                use_coords: useCoords,
                 use_order: true,
             },
             v4_negative_prompt: {

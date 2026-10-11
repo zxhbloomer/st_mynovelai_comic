@@ -500,6 +500,7 @@ export async function exportPortablePreviewsForSlots(slotIds = []) {
             errorMessage: preview.errorMessage || null,
             characterPrompts: preview.characterPrompts || null,
             negativePrompt: preview.negativePrompt || null,
+            ...(preview.comic ? { comic: preview.comic } : {}),
             generationSnapshot: preview.generationSnapshot || null,
             plannerSourceText: preview.plannerSourceText ?? null,
             plannerSourceOrigin: preview.plannerSourceOrigin ?? null,
@@ -600,6 +601,7 @@ export async function storePreview(opts) {
         errorMessage = null,
         characterPrompts = null,
         negativePrompt = null,
+        comic = null,
         generationSnapshot = null,
         plannerSourceText = null,
         plannerSourceOrigin = null,
@@ -620,7 +622,8 @@ export async function storePreview(opts) {
     return new Promise((resolve, reject) => {
         try {
             const tx = database.transaction(DB_STORE, 'readwrite');
-            tx.objectStore(DB_STORE).put({
+            const store = tx.objectStore(DB_STORE);
+            const next = {
                 imgId,
                 slotId: resolvedSlotId,
                 messageId,
@@ -640,11 +643,24 @@ export async function storePreview(opts) {
                 errorMessage,
                 characterPrompts,
                 negativePrompt,
+                ...(comic ? { comic: JSON.parse(JSON.stringify(comic)) } : {}),
                 generationSnapshot,
                 plannerSourceText,
                 plannerSourceOrigin,
                 timestamp: Date.now()
-            });
+            };
+            if (comic) {
+                const lookup = store.get(imgId);
+                lookup.onsuccess = () => {
+                    const previous = lookup.result;
+                    if (!next.comic.draft && previous?.comic?.draft && previous.comic.image === next.comic.image) {
+                        next.comic.draft = previous.comic.draft;
+                    }
+                    store.put(next);
+                };
+            } else {
+                store.put(next);
+            }
             tx.oncomplete = () => {
                 invalidateCache(resolvedSlotId);
                 publishCacheChange([resolvedSlotId]);
@@ -677,6 +693,7 @@ export async function storeFailedPlaceholder(opts) {
         errorMessage: opts.errorMessage,
         characterPrompts: opts.characterPrompts ?? null,
         negativePrompt: opts.negativePrompt ?? null,
+        ...(opts.comic ? { comic: opts.comic } : {}),
         generationSnapshot: opts.generationSnapshot ?? null,
         plannerSourceText: opts.plannerSourceText ?? null,
         plannerSourceOrigin: opts.plannerSourceOrigin ?? null,
@@ -1294,7 +1311,8 @@ async function deleteCurrentGalleryImage() {
     if (!confirm(msg)) return;
 
     try {
-        await deletePreview(current.imgId);
+        if (callbacks.deleteVersion) await callbacks.deleteVersion(current.imgId);
+        else await deletePreview(current.imgId);
 
         const selectedId = await getSlotSelection(slotId);
         if (selectedId === current.imgId) {
@@ -1306,7 +1324,7 @@ async function deleteCurrentGalleryImage() {
         if (previews.length === 0) {
             closeGallery();
             if (callbacks.onBecameEmpty) {
-                callbacks.onBecameEmpty(slotId, messageId, { tags: current.tags || '', positive: current.positive || '' });
+                callbacks.onBecameEmpty(slotId, messageId, { tags: current.tags || '', positive: current.positive || '', ...(current.comic ? { comic: current.comic } : {}) });
             }
             showToast('图片已删除，可点击重试重新生成');
         } else {
