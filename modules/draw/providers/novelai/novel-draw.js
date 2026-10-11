@@ -1,8 +1,9 @@
 import { startComicJobRecovery } from '../../shared/comic-job-recovery.js';
 import { getPendingImageJobSlots } from '../../shared/pending-image-jobs.js';
-import { normalizeComicMode, buildComicMessages, createComicTasks } from '../../shared/comic-planning.js';
+import { normalizeComicMode, buildComicMessages, createComicTasks, resolveComicPromptMacros } from '../../shared/comic-planning.js';
 import { callComicText } from '../../shared/comic-agent.js';
 import { normalizePromptGroups, applyPromptGroups } from '../../shared/prompt-groups.js';
+import { loadScenePromptRuntime } from '../../shared/scene-prompt-expansion.js';
 import { appendDrawLog, getDrawLogs, clearDrawLogs } from '../../shared/scene-planner-debug.js';
 // novel-draw.js
 
@@ -2698,8 +2699,11 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
     }
     appendDrawLog('②③ 规划 · 世界书处理完成', { length: worldInfo.length });
     const guide = getEffectiveNovelModelGuide(preset.params?.model, prompt);
+    const promptRuntime = await loadScenePromptRuntime();
+    const resolvedPrompts = resolveComicPromptMacros({ opening: prompt.topSystem, guide, rules: prompt.sceneRules }, promptRuntime.substituteParams);
+    appendDrawLog('②③ 规划 · 宏处理完成', { openingLength: resolvedPrompts.opening.length, guideLength: resolvedPrompts.guide.length, rulesLength: resolvedPrompts.rules.length });
     const messages = buildComicMessages({ source: sourceText, mode, maxImages: preset.maxImages || 0,
-        opening: prompt.topSystem, guide, rules: prompt.sceneRules, worldInfo });
+        opening: resolvedPrompts.opening, guide: resolvedPrompts.guide, rules: resolvedPrompts.rules, worldInfo });
     onStateChange?.('llm', { phase: 'analysis', label: '生成完整图片描述' });
     const response = await callComicText(messages, { signal });
     const tasks = createComicTasks({ source: sourceText, response, mode, maxImages: preset.maxImages || 0 });

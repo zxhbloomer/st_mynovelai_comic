@@ -7,6 +7,15 @@ export function normalizeComicMode(mode) {
     return ['inline', 'end'].includes(mode) ? mode : 'points';
 }
 
+export function resolveComicPromptMacros({ opening = '', guide = '', rules = '' } = {}, substituteParams) {
+    if (typeof substituteParams !== 'function') throw new TypeError('需要酒馆 substituteParams 宏处理函数');
+    return {
+        opening: substituteParams(String(opening ?? '')),
+        guide: substituteParams(String(guide ?? '')),
+        rules: substituteParams(String(rules ?? '')),
+    };
+}
+
 export function createComicSnapshot(source, mode) {
     const snapshot = createMangaGeneration().snapshotTarget([{ id: 0, role: 'assistant', text: stripDrawImageSlots(source) }], 0, 0);
     if (mode === 'inline' && !snapshot.inlineSafe) throw new Error('正文无法安全按段落定位，请选择文章末尾');

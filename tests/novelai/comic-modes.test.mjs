@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseImageBlock, serializeSectionImageProtocol } from '../../modules/draw/shared/comic-protocol.js';
-import { createComicTasks, buildComicMessages } from '../../modules/draw/shared/comic-planning.js';
+import { createComicTasks, buildComicMessages, resolveComicPromptMacros } from '../../modules/draw/shared/comic-planning.js';
 import { compileNovelPromptForTask, buildNovelAIRequestBody } from '../../modules/draw/providers/novelai/compiler.js';
 import { parseNovelPromptPresetImport } from '../../modules/draw/providers/novelai/novel-prompt-import.js';
 const image = `@page
@@ -150,4 +150,31 @@ test('agent provider config preserves provider body params and timeout defaults'
  const provider=config.presets.x.modelConfigs['openai-compatible'];
  assert.equal(provider.requestBodyParams,'{"thinking":{"type":"disabled"}}');assert.equal(provider.timeoutMs,12345);
  assert.equal(config.presets.x.modelConfigs.anthropic.requestBodyParams,'');assert.equal(config.presets.x.modelConfigs.anthropic.timeoutMs,600000);
+});
+
+test('comic prompt macros resolve through the host substituteParams function in group order', () => {
+    const calls = [];
+    const vars = new Map();
+    const substitute = (text) => {
+        calls.push(text);
+        return String(text)
+            .replace(/\{\{setvar::([^:]+)::([^}]*)}}/g, (_, key, value) => {
+                vars.set(key, value);
+                return '';
+            })
+            .replace(/\{\{getvar::([^}]+)}}/g, (_, key) => vars.get(key) || '');
+    };
+
+    const result = resolveComicPromptMacros({
+        opening: '{{setvar::tone::全彩}}\n{{getvar::tone}}',
+        guide: '指南 {{getvar::tone}}',
+        rules: '规则',
+    }, substitute);
+
+    assert.deepEqual(result, {
+        opening: '\n全彩',
+        guide: '指南 全彩',
+        rules: '规则',
+    });
+    assert.equal(calls.length, 3);
 });
