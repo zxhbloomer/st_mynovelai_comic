@@ -2,7 +2,7 @@ import { resolveDrawAgentContext } from './draw-agent.js';
 import { appendDrawLog } from './scene-planner-debug.js';
 import { parseRerollResponse } from './comic-protocol.js';
 
-export async function callComicText(messages, { signal, timeout = 120000, context, operation = '生成描述' } = {}) {
+export async function callComicText(messages, { signal, timeout, context, operation = '生成描述' } = {}) {
     signal?.throwIfAborted();
     const requestId = `comic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const startedAt = Date.now();
@@ -14,17 +14,24 @@ export async function callComicText(messages, { signal, timeout = 120000, contex
         appendDrawLog('②③ LLM · 设置读取失败', { requestId, error: error.message }, 'error');
         throw error;
     }
+    const effectiveTimeout = Number(providerConfig.timeoutMs) > 0 ? Number(providerConfig.timeoutMs) : (Number(timeout) > 0 ? Number(timeout) : 600000);
     const controller = new AbortController();
     const abort = () => controller.abort(signal.reason);
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) abort();
-    const timer = setTimeout(() => controller.abort(new Error('图片描述生成超时')), timeout);
+    const timer = setTimeout(() => controller.abort(new Error('图片描述生成超时')), effectiveTimeout);
     try {
         const adapter = agentCore.createAgentAdapter(providerConfig);
         appendDrawLog('②③ LLM · 开始请求', { requestId, operation, preset: providerConfig.currentPresetName,
             provider: providerConfig.provider, model: providerConfig.model, messages });
+        let extraBody;
+        if (String(providerConfig.requestBodyParams || '').trim()) {
+            extraBody = JSON.parse(providerConfig.requestBodyParams);
+            if (!extraBody || Array.isArray(extraBody) || typeof extraBody !== 'object') throw new Error('附加主体参数必须是 JSON 对象');
+            for (const key of ['messages', 'model', 'stream', 'tools', 'tool_choice', 'max_tokens', 'temperature']) delete extraBody[key];
+        }
         const result = await adapter.chat({ messages, tools: [], temperature: providerConfig.temperature,
-            maxTokens: providerConfig.maxTokens, reasoning: providerConfig.reasoning, signal: controller.signal });
+            maxTokens: providerConfig.maxTokens, reasoning: providerConfig.reasoning, extraBody, signal: controller.signal });
         controller.signal.throwIfAborted();
         if (!String(result?.text || '').trim()) throw new Error('LLM 未返回完整图片描述');
         appendDrawLog('②③ LLM · 请求完成', { requestId, durationMs: Date.now() - startedAt, response: result.text });

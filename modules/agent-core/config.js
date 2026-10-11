@@ -11,6 +11,7 @@ export const DEFAULT_PRESET_NAME = '默认';
 export const DEFAULT_PERMISSION_MODE = 'default';
 export const DEFAULT_JSAPI_PERMISSION = 'deny';
 export const DEFAULT_MAX_TOKENS = 32000;
+export const DEFAULT_AGENT_TIMEOUT_MS = 600000;
 export const AGENT_SETTINGS_CONFIG_VERSION = 1;
 export const AGENT_PERMISSION_MODE_OPTIONS = Object.freeze([
     { value: 'default', label: '默认权限' },
@@ -29,6 +30,8 @@ export const DEFAULT_MODEL_CONFIGS = {
         temperature: 1,
         maxTokens: DEFAULT_MAX_TOKENS,
         sendTemperature: true,
+        requestBodyParams: '',
+        timeoutMs: DEFAULT_AGENT_TIMEOUT_MS,
     },
     'openai-compatible': {
         baseUrl: 'https://api.openai.com/v1',
@@ -55,6 +58,8 @@ export const DEFAULT_MODEL_CONFIGS = {
         temperature: 1,
         maxTokens: DEFAULT_MAX_TOKENS,
         sendTemperature: true,
+        requestBodyParams: '',
+        timeoutMs: DEFAULT_AGENT_TIMEOUT_MS,
     },
     'sillytavern-google': {
         baseUrl: '',
@@ -63,6 +68,8 @@ export const DEFAULT_MODEL_CONFIGS = {
         temperature: 1,
         maxTokens: DEFAULT_MAX_TOKENS,
         sendTemperature: true,
+        requestBodyParams: '',
+        timeoutMs: DEFAULT_AGENT_TIMEOUT_MS,
     },
     anthropic: {
         baseUrl: 'https://api.anthropic.com',
@@ -71,6 +78,8 @@ export const DEFAULT_MODEL_CONFIGS = {
         temperature: 1,
         maxTokens: DEFAULT_MAX_TOKENS,
         sendTemperature: true,
+        requestBodyParams: '',
+        timeoutMs: DEFAULT_AGENT_TIMEOUT_MS,
     },
     google: {
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
@@ -79,6 +88,8 @@ export const DEFAULT_MODEL_CONFIGS = {
         temperature: 1,
         maxTokens: DEFAULT_MAX_TOKENS,
         sendTemperature: true,
+        requestBodyParams: '',
+        timeoutMs: DEFAULT_AGENT_TIMEOUT_MS,
     },
 };
 
@@ -139,6 +150,8 @@ export function normalizeModelConfigs(modelConfigs = {}) {
             apiKey: normalizeAgentApiKey(source.apiKey ?? defaults.apiKey),
             temperature: source.temperature ?? defaults.temperature,
             maxTokens: normalizeMaxTokens(source.maxTokens, defaults.maxTokens),
+            requestBodyParams: typeof source.requestBodyParams === 'string' ? source.requestBodyParams : String(defaults.requestBodyParams || ''),
+            timeoutMs: Number.isFinite(Number(source.timeoutMs)) && Number(source.timeoutMs) > 0 ? Math.floor(Number(source.timeoutMs)) : DEFAULT_AGENT_TIMEOUT_MS,
             sendTemperature: typeof source.sendTemperature === 'boolean'
                 ? source.sendTemperature
                 : defaults.sendTemperature,

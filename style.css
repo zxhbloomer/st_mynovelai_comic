@@ -458,6 +458,8 @@ body.immersive-mode .flex-container.flex1.alignitemscenter {
 @media(max-width:768px) { .xb-comic-dialog { padding:16px; } .xb-comic-columns { grid-template-columns:1fr; } .xb-comic-preview { max-height:280px; } }
 
 /* Image card folding keeps existing card selectors and actions intact. */
+.xb-nd-img { width:100% !important; box-sizing:border-box; }
+.xb-image-fold { width:100%; box-sizing:border-box; }
 .xb-image-fold > summary { cursor:pointer; padding:8px 12px; font-size:13px; border-radius:8px; background:rgba(128,128,128,.12); }
 .xb-image-fold > summary .xb-image-open-label { display:none; }
 .xb-image-fold[open] > summary .xb-image-open-label { display:inline; }

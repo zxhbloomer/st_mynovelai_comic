@@ -290,6 +290,16 @@ export function buildAgentSettingsPanelMarkup(options = {}) {
                     <button id="xb-assistant-toggle-tavily-key" type="button" class="secondary ghost">显示</button>
                 </div>
             </label>` : ''}
+            <label>
+                <span>附加主体参数（当前 Provider）</span>
+                <textarea id="xb-assistant-request-body-params" rows="4" placeholder='{"thinking":{"type":"disabled"}}'></textarea>
+                <small>按当前 Provider 保存；为空时不追加。内容用于请求主体，不会拼入提示词。</small>
+            </label>
+            <label>
+                <span>LLM 超时（秒）</span>
+                <input id="xb-assistant-timeout-ms" type="number" min="1" step="1" inputmode="numeric" />
+                <small>默认600秒，只控制LLM请求。</small>
+            </label>
             <label id="xb-assistant-tool-mode-wrap">
                 <span>Tool 调用格式</span>
                 <select id="xb-assistant-tool-mode"></select>

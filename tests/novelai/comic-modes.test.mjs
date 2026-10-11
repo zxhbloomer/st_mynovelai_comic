@@ -143,3 +143,11 @@ test('draw logs preserve nested error details and redact their credentials', asy
  assert.match(entry.details,/HTTP 500/);assert.match(entry.details,/upstream failed/);assert.doesNotMatch(entry.details,/private/);
  clearDrawLogs();
 });
+
+test('agent provider config preserves provider body params and timeout defaults', async () => {
+ const {normalizeAgentConfig}=await import('../../modules/agent-core/config.js');
+ const config=normalizeAgentConfig({presets:{x:{provider:'openai-compatible',modelConfigs:{'openai-compatible':{requestBodyParams:'{"thinking":{"type":"disabled"}}',timeoutMs:12345}}}},currentPresetName:'x'});
+ const provider=config.presets.x.modelConfigs['openai-compatible'];
+ assert.equal(provider.requestBodyParams,'{"thinking":{"type":"disabled"}}');assert.equal(provider.timeoutMs,12345);
+ assert.equal(config.presets.x.modelConfigs.anthropic.requestBodyParams,'');assert.equal(config.presets.x.modelConfigs.anthropic.timeoutMs,600000);
+});

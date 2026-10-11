@@ -2823,6 +2823,7 @@ function applyParamsPreset() {
 /** 纯本地：从当前选中的提示词预设加载 textarea 内容（对标 applyParamsPreset） */
 const promptGroupDrafts = new Map();
 const promptGroupOpenStates = new Map();
+let promptDragRow = null;
 const promptGroupIds = { topSystem: 'nd_prompt_system', sceneRules: 'nd_prompt_format', modelGuide: 'nd_prompt_guide' };
 function getPromptGroupDraft() {
     const active = getActivePromptPresetForForm() || {};
@@ -2859,11 +2860,22 @@ function renderPromptGroup(key) {
     for (const row of rows) {
         const card = document.createElement('details'); card.className = 'card'; card.dataset.rowId = row.id; card.open = openStates.get(row.id) === true;
         card.addEventListener('toggle', () => { if (card.isConnected) openStates.set(row.id, card.open); });
+        card.draggable = true;
+        card.addEventListener('dragstart', event => { promptDragRow = row; event.dataTransfer.effectAllowed = 'move'; card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => { promptDragRow = null; card.classList.remove('dragging'); });
+        card.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; });
+        card.addEventListener('drop', event => {
+            event.preventDefault(); if (!promptDragRow || promptDragRow === row) return;
+            const from = rows.indexOf(promptDragRow), to = rows.indexOf(row);
+            if (from < 0 || to < 0) return;
+            rows.splice(from, 1); rows.splice(to, 0, promptDragRow); update(); renderPromptGroup(key);
+        });
         const head = document.createElement('summary');
         const label = document.createElement('span'); label.textContent = row.title || '未命名提示词';
         const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.checked = row.enabled !== false;
         toggle.setAttribute('aria-label', '启用此提示词'); toggle.title = '开启使用，关闭忽略';
         toggle.style.cssText = 'float:right;cursor:pointer';
+        toggle.draggable = false;
         toggle.addEventListener('click', event => event.stopPropagation());
         toggle.addEventListener('change', () => { row.enabled = toggle.checked; update(); });
         head.append(label, toggle);

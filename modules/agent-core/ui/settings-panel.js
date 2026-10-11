@@ -489,6 +489,8 @@ export function createAgentSettingsPanel(deps = {}) {
             sendTemperature: shouldSendTemperature(providerConfig),
             ...reasoningFields,
             toolMode: providerConfig.toolMode || 'native',
+            requestBodyParams: String(providerConfig.requestBodyParams || ''),
+            timeoutMs: Number(providerConfig.timeoutMs) || 600000,
         };
     }
 
@@ -586,6 +588,8 @@ export function createAgentSettingsPanel(deps = {}) {
             toolMode: isToolModeProvider(provider)
                 ? (root.querySelector('#xb-assistant-tool-mode')?.value || draft.toolMode || 'native')
                 : undefined,
+            requestBodyParams: root.querySelector('#xb-assistant-request-body-params')?.value || '',
+            timeoutMs: Math.max(1000, Number(root.querySelector('#xb-assistant-timeout-ms')?.value) || 600000),
         };
         const delegateProviderConfig = {
             baseUrl: delegateBaseUrl,
@@ -942,6 +946,8 @@ export function createAgentSettingsPanel(deps = {}) {
         const sendTemperatureInput = root.querySelector('#xb-assistant-send-temperature');
         const toolModeWrap = root.querySelector('#xb-assistant-tool-mode-wrap');
         const toolModeSelect = root.querySelector('#xb-assistant-tool-mode');
+        const requestBodyParamsInput = root.querySelector('#xb-assistant-request-body-params');
+        const timeoutInput = root.querySelector('#xb-assistant-timeout-ms');
         const permissionModeSelect = root.querySelector('#xb-assistant-permission-mode');
         const jsApiPermissionSelect = root.querySelector('#xb-assistant-jsapi-permission');
         const pulledSelect = root.querySelector('#xb-assistant-model-pulled');
@@ -979,6 +985,8 @@ export function createAgentSettingsPanel(deps = {}) {
         if (temperatureInput) temperatureInput.value = String(normalizeTemperature(draft.temperature, 1));
         if (sendTemperatureInput) sendTemperatureInput.checked = Boolean(draft.sendTemperature ?? true);
         if (tavilyApiKeyInput) tavilyApiKeyInput.value = draft.tavilyApiKey || '';
+        if (requestBodyParamsInput) requestBodyParamsInput.value = draft.requestBodyParams || '';
+        if (timeoutInput) timeoutInput.value = String(Math.round((Number(draft.timeoutMs) || 600000) / 1000));
         if (toolModeWrap) toolModeWrap.style.display = isToolModeProvider(provider) ? '' : 'none';
         if (toolModeSelect) {
             refillSelect(toolModeSelect, TOOL_MODE_OPTIONS);
@@ -1340,6 +1348,9 @@ export function createAgentSettingsPanel(deps = {}) {
         root.querySelector('#xb-assistant-reasoning-budget')?.addEventListener('input', () => {
             syncConfigDraft(root);
         });
+
+        root.querySelector('#xb-assistant-request-body-params')?.addEventListener('input', () => { syncConfigDraft(root); });
+        root.querySelector('#xb-assistant-timeout-ms')?.addEventListener('input', () => { syncConfigDraft(root); });
 
         root.querySelector('#xb-assistant-tool-mode')?.addEventListener('change', () => {
             syncConfigDraft(root);
