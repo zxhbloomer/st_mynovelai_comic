@@ -206,7 +206,7 @@ function validateAgent(value) {
     const allowedConfigFields = [
         'currentPresetName', 'provider', 'baseUrl', 'model', 'apiKey',
         'temperature', 'sendTemperature', 'maxTokens', 'timeoutMs',
-        'toolMode', 'reasoning',
+        'toolMode', 'reasoning', 'requestBodyParams', 'extraBody',
     ];
     const config = assertExactKeys(agent.providerConfig, allowedConfigFields, 'agent.providerConfig', [
         'provider', 'baseUrl', 'model', 'maxTokens', 'timeoutMs', 'toolMode', 'reasoning',
@@ -225,6 +225,11 @@ function validateAgent(value) {
     }
     if (Object.hasOwn(config, 'sendTemperature')) {
         requireBoolean(config.sendTemperature, 'agent.providerConfig.sendTemperature');
+    }
+    if (Object.hasOwn(config, 'requestBodyParams')) requireString(config.requestBodyParams, 'agent.providerConfig.requestBodyParams', { allowEmpty: true });
+    if (Object.hasOwn(config, 'extraBody')) {
+        assertPlainObject(config.extraBody, 'agent.providerConfig.extraBody');
+        assertSafeJson(config.extraBody, 'agent.providerConfig.extraBody');
     }
     requirePositiveNumber(config.maxTokens, 'agent.providerConfig.maxTokens');
     requirePositiveNumber(config.timeoutMs, 'agent.providerConfig.timeoutMs');

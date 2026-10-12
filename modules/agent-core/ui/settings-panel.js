@@ -1,3 +1,4 @@
+import { parseRequestBodyParams } from '../adapters/request-body-params.js';
 import {
     HOST_CHAT_COMPLETIONS_SOURCE_CLAUDE,
     HOST_CHAT_COMPLETIONS_SOURCE_MAKERSUITE,
@@ -726,7 +727,9 @@ export function createAgentSettingsPanel(deps = {}) {
             temperature: draft.sendTemperature === false ? undefined : normalizeTemperature(draft.temperature, 1),
             sendTemperature: Boolean(draft.sendTemperature ?? true),
             maxTokens: normalizeMaxTokens(draft.maxTokens),
-            timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
+            timeoutMs: Number(draft.timeoutMs) || 600000,
+            requestBodyParams: String(draft.requestBodyParams || ''),
+            extraBody: parseRequestBodyParams(draft.requestBodyParams),
             toolMode: draft.toolMode || 'native',
             reasoning: resolveRuntimeReasoning({
                 provider: draft.provider,

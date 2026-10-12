@@ -1,0 +1,74 @@
+// Browser and backend use this same configuration boundary. SDK bundles stay untouched.
+export function normalizeApiBaseUrl(raw) {
+    return String(raw || '').trim().replace(/\/+$/, '')
+        .replace(/\/(chat\/completions|responses|messages|interactions)$/, '');
+}
+
+export function buildCustomHostFields(config = {}) {
+    return {
+        chat_completion_source: 'custom',
+        custom_url: normalizeApiBaseUrl(config.baseUrl || 'https://api.openai.com/v1'),
+        ...(config.apiKey ? { custom_include_headers: JSON.stringify({ Authorization: `Bearer ${config.apiKey}` }) } : {}),
+    };
+}
+
+export function createConfiguredAgentAdapter(agentCore, config = {}, options = {}) {
+    const normalized = { ...config, baseUrl: normalizeApiBaseUrl(config.baseUrl) };
+    // The former extraBody merge inside the bundled host builder read the wrong owner.
+    // Additional fields now have one owner, applied after protocol-specific construction.
+    delete normalized.extraBody;
+    const adapter = agentCore.createAgentAdapter(normalized, options);
+    const extraBody = config.extraBody;
+    const hasExtras = extraBody && Object.keys(extraBody).length > 0;
+    if (config.provider === 'sillytavern-openai-compatible') {
+        const build = adapter.buildPayload.bind(adapter);
+        adapter.buildPayload = (...args) => {
+            const payload = build(...args);
+            delete payload.reverse_proxy;
+            delete payload.proxy_password;
+            return {
+                ...payload,
+                ...buildCustomHostFields(config),
+                ...(hasExtras ? { custom_include_body: JSON.stringify(extraBody) } : {}),
+            };
+        };
+    } else if (hasExtras && (config.provider === 'sillytavern-claude' || config.provider === 'sillytavern-google')) {
+        // ST's native branches do not implement arbitrary custom_include_body merging.
+        throw new Error('当前酒馆 Claude/Google 渠道不支持任意附加主体参数；请清空该项，或使用对应的直连 Provider。');
+    } else if (hasExtras && config.provider === 'google') {
+        const build = adapter.buildChatPayload.bind(adapter);
+        adapter.buildChatPayload = (...args) => {
+            const payload = build(...args);
+            payload.createPayload.config.httpOptions = {
+                ...payload.createPayload.config.httpOptions, extraBody,
+            };
+            return payload;
+        };
+    } else if (hasExtras) {
+        const build = adapter.buildRequestBody.bind(adapter);
+        adapter.buildRequestBody = (...args) => ({ ...build(...args), ...extraBody });
+    }
+    if (typeof adapter.buildRequestInspection === 'function') {
+        const inspect = adapter.buildRequestInspection.bind(adapter);
+        adapter.buildRequestInspection = (...args) => redactSerializedHeaders(inspect(...args));
+    }
+    return adapter;
+}
+
+
+export function redactSerializedHeaders(value) {
+    if (Array.isArray(value)) return value.map(redactSerializedHeaders);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => {
+        if (key === 'custom_include_headers' && typeof entry === 'string') {
+            try {
+                const headers = JSON.parse(entry);
+                for (const name of Object.keys(headers)) {
+                    if (/authorization|api[-_]?key|cookie|token/i.test(name)) headers[name] = '[redacted]';
+                }
+                return [key, JSON.stringify(headers)];
+            } catch { return [key, '[redacted]']; }
+        }
+        return [key, redactSerializedHeaders(entry)];
+    }));
+}

@@ -1,3 +1,4 @@
+import { buildCustomHostFields } from '../../../modules/agent-core/adapters/configured-adapter.js';
 import { readSseEventsFromResponse } from './sse.js';
 import { resolveModelFamily } from '../model-family.js';
 import { getHostRequestHeaders } from '../../host-request-headers.js';
@@ -212,7 +213,9 @@ function cleanPayload(body = {}) {
 }
 
 export function buildHostChatCompletionsStatusPayload(config = {}, source = HOST_CHAT_COMPLETIONS_SOURCE_OPENAI) {
-    return buildHostChatCompletionsFields(config, source);
+    return source === HOST_CHAT_COMPLETIONS_SOURCE_OPENAI
+        ? buildCustomHostFields(config)
+        : buildHostChatCompletionsFields(config, source);
 }
 
 export function buildHostOpenAICompatibleStatusPayload(config = {}) {

@@ -1,3 +1,4 @@
+import { parseRequestBodyParams } from './adapters/request-body-params.js';
 import {
     DEFAULT_PRESET_NAME,
     buildDefaultPreset,
@@ -93,6 +94,7 @@ export function resolveActiveProviderConfig(configValue = {}, options = {}) {
             maxTokens: normalizeMaxTokens(providerConfig.maxTokens),
             timeoutMs: Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : Number(providerConfig.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
             requestBodyParams: String(providerConfig.requestBodyParams || ''),
+            extraBody: parseRequestBodyParams(providerConfig.requestBodyParams),
             toolMode: providerConfig.toolMode || 'native',
             reasoning: resolveRuntimeReasoning(context, providerConfig.reasoning),
         };
@@ -128,7 +130,8 @@ export function resolveActiveProviderConfig(configValue = {}, options = {}) {
         sendTemperature: shouldSendTemperature(providerConfig),
         maxTokens: normalizeMaxTokens(providerConfig.maxTokens),
         timeoutMs: Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : Number(providerConfig.timeoutMs) || AGENT_REQUEST_TIMEOUT_MS,
-            requestBodyParams: String(providerConfig.requestBodyParams || ''),
+        requestBodyParams: String(providerConfig.requestBodyParams || ''),
+        extraBody: parseRequestBodyParams(providerConfig.requestBodyParams),
         toolMode: providerConfig.toolMode || 'native',
         reasoning: resolveRuntimeReasoning(context, providerConfig.reasoning),
     };

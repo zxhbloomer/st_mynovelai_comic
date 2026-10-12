@@ -1,3 +1,4 @@
+import { redactSerializedHeaders } from './configured-adapter.js';
 export function redactRequestSecrets(value) {
     if (Array.isArray(value)) {
         return value.map((item) => redactRequestSecrets(item));
@@ -11,7 +12,7 @@ export function redactRequestSecrets(value) {
             ? (entry === '' ? '' : '[redacted]')
             : redactRequestSecrets(entry);
     });
-    return redacted;
+    return redactSerializedHeaders(redacted);
 }
 
 export function buildEffectiveReasoningConfig(task = {}, overrides = {}) {

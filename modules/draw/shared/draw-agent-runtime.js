@@ -1,3 +1,4 @@
+import { createConfiguredAgentAdapter } from '../../agent-core/adapters/configured-adapter.js';
 import {
     SUBMIT_SCENE_PLAN_TOOL_NAME,
     ScenePlannerError,
@@ -376,7 +377,7 @@ export async function callDrawScenePlannerAgentRuntime(options = {}) {
 
     let adapter;
     try {
-        adapter = agentCore.createAgentAdapter(providerConfig, {
+        adapter = createConfiguredAgentAdapter(agentCore, providerConfig, {
             ...(Object.hasOwn(options, 'hostClient') ? { hostClient: options.hostClient } : {}),
         });
     } catch (rawError) {
@@ -390,7 +391,7 @@ export async function callDrawScenePlannerAgentRuntime(options = {}) {
         throw error;
     }
 
-    const abortScope = createAbortScope(options.timeout, options.signal);
+    const abortScope = createAbortScope(options.timeout ?? providerConfig.timeoutMs, options.signal);
     const baseAgentTask = {
         ...task,
         toolChoice: 'required',

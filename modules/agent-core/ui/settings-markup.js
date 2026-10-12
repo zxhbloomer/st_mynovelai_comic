@@ -292,8 +292,8 @@ export function buildAgentSettingsPanelMarkup(options = {}) {
             </label>` : ''}
             <label>
                 <span>附加主体参数（当前 Provider）</span>
-                <textarea id="xb-assistant-request-body-params" rows="4" placeholder='{"thinking":{"type":"disabled"}}'></textarea>
-                <small>按当前 Provider 保存；为空时不追加。内容用于请求主体，不会拼入提示词。</small>
+                <textarea id="xb-assistant-request-body-params" rows="4" placeholder="thinking:&#10;  type: disabled"></textarea>
+                <small>按当前 Provider 保存。填写 YAML 对象（也兼容 JSON），为空不追加；内容合并到最终请求主体，不会拼入提示词。</small>
             </label>
             <label>
                 <span>LLM 超时（秒）</span>

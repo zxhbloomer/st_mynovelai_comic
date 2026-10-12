@@ -20791,7 +20791,6 @@ function Oa(e = {}, t = {}, n = [], o = !1, r = Bt) {
   const i = t.maxTokens, s = r === "openai" && N0(e.model);
   return q0({
     ...Mm(e, r),
-    ...(e.extraBody && typeof e.extraBody === "object" && !Array.isArray(e.extraBody) ? e.extraBody : {}),
     stream: !!o,
     messages: n,
     model: e.model,
