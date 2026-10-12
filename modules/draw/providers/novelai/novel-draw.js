@@ -2645,6 +2645,7 @@ async function buildNovelScenePlannerOptions({
     useWorldbook = true,
     onStateChange,
     focusRequirement = '',
+    focusImages = [],
 }) {
     let worldbookEntries = null;
     const customPrompts = getActivePromptPreset(settings) || DEFAULT_PROMPT_CONFIG;
@@ -2674,13 +2675,14 @@ async function buildNovelScenePlannerOptions({
         modelGuide: getEffectiveNovelModelGuide(model, customPrompts),
         plannerProfile: getNovelPlannerProfile(model),
         focusRequirement,
+        focusImages,
         onDiagnosticUpdate: diagnostic => onStateChange?.('llm', toScenePlannerProgress(diagnostic)),
         signal,
     };
 }
 
 
-async function buildComicSourceTasks({ sourceText, settings, preset, signal, onStateChange, useWorldbook = true, focusRequirement = '' }) {
+async function buildComicSourceTasks({ sourceText, settings, preset, signal, onStateChange, useWorldbook = true, focusRequirement = '', focusImages = [] }) {
     appendDrawLog('②③ 规划 · 开始准备', { mode: getActivePromptPreset(settings)?.imageMode,
         sourceLength: sourceText.length, useWorldInfo: useWorldbook && settings.useWorldInfo });
     const prompt = getActivePromptPreset(settings) || {};
@@ -2705,7 +2707,7 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
     const resolvedPrompts = resolveComicPromptMacros({ opening: prompt.topSystem, guide, rules: prompt.sceneRules }, promptRuntime.substituteParams);
     appendDrawLog('②③ 规划 · 宏处理完成', { openingLength: resolvedPrompts.opening.length, guideLength: resolvedPrompts.guide.length, rulesLength: resolvedPrompts.rules.length });
     const messages = buildComicMessages({ source: sourceText, mode, maxImages: preset.maxImages || 0,
-        opening: resolvedPrompts.opening, guide: resolvedPrompts.guide, rules: resolvedPrompts.rules, worldInfo, focusRequirement });
+        opening: resolvedPrompts.opening, guide: resolvedPrompts.guide, rules: resolvedPrompts.rules, worldInfo, focusRequirement, focusImages });
     onStateChange?.('llm', { phase: 'analysis', label: '生成完整图片描述' });
     const response = await callComicText(messages, { signal });
     const tasks = createComicTasks({ source: sourceText, response, mode, maxImages: preset.maxImages || 0 });
@@ -2718,7 +2720,7 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
     return tasks;
 }
 
-async function generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement = '' }) {
+async function generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement = '', focusImages = [] }) {
     const sourceText = message.mes;
     const swipeIndex = message.swipe_id ?? 0;
     const existing = [];
@@ -2743,7 +2745,7 @@ async function generateComicForMessage({ ctx, message, messageId, settings, pres
     } else {
         job.phase = 'llm';
         tasks = await buildComicSourceTasks({ sourceText, settings, preset,
-            signal: job.controller.signal, onStateChange, focusRequirement });
+            signal: job.controller.signal, onStateChange, focusRequirement, focusImages });
     }
     job.controller.signal.throwIfAborted();
     if (message.mes !== sourceText || (message.swipe_id ?? 0) !== swipeIndex) throw new Error('正文或消息分支已变化，未开始绘图');
@@ -2992,6 +2994,7 @@ async function generateAndInsertImages({
     onStateChange,
     automatic = false,
     focusRequirement = '',
+    focusImages = [],
 }) {
 
     const job = createGenerationJob(messageId);
@@ -3009,7 +3012,7 @@ async function generateAndInsertImages({
         const preset = cloneSettingsObject(getActiveParamsPreset());
 
         if (normalizeComicMode(getActivePromptPreset(settings)?.imageMode) !== 'points') {
-            return await generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement });
+            return await generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement, focusImages });
         }
 
         const filterRules = settings.messageFilterRules?.length
@@ -3042,6 +3045,7 @@ async function generateAndInsertImages({
                             signal,
                             onStateChange,
                             focusRequirement,
+                            focusImages,
                         }),
                         maxPlanImages,
                     });
@@ -3075,6 +3079,7 @@ async function generateAndInsertImages({
                 signal,
                 onStateChange,
                 focusRequirement,
+                focusImages,
             }));
         } catch (e) {
             console.error('[NovelDraw] 场景分析原始错误:', e);

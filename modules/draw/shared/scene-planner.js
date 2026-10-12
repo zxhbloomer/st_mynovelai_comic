@@ -1,3 +1,4 @@
+import { withFocusImages } from './draw-focus-dialog.js';
 import { xbLog } from '../../../core/debug-core.js';
 import {
     beginDrawScenePlannerDiagnostic,
@@ -188,6 +189,7 @@ async function buildScenePlannerRequest(options = {}) {
         modelGuide = null,
         plannerProfile = null,
         focusRequirement = '',
+        focusImages = [],
     } = options;
     const profile = normalizeScenePlannerProfile(plannerProfile);
     const centerMode = profile.centerMode === 'normalized' ? 'normalized' : 'grid';
@@ -275,7 +277,7 @@ async function buildScenePlannerRequest(options = {}) {
 
         const prompt = {
             systemPrompt,
-            messages: [{ role: 'user', content: finalUserTask }],
+            messages: [{ role: 'user', content: withFocusImages(finalUserTask, focusImages) }],
         };
         await emitScenePromptReady(runtime, [
             ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),

@@ -1,3 +1,4 @@
+import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
 ﻿// floating-panel.js
 /**
  * NovelDraw 画图按钮面板 - 支持楼层按钮和悬浮按钮双模式
@@ -957,12 +958,12 @@ async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
     if (!panelData || panelData.state !== FloatState.IDLE) return;
 
-    const focusRequirement = window.prompt('本次花漫画的重点要求（可留空）：', '');
-    if (focusRequirement === null) return;
+    const focus = await openDrawFocusDialog({ messageId });
+    if (focus === null) return;
 
     try {
         await generateAndInsertImages({
-            messageId, focusRequirement: focusRequirement.trim(),
+            messageId, ...focus,
             onStateChange: (state, data, liveId) => {
                 setStateForMessage(liveId, state, data);
             }
@@ -1550,12 +1551,12 @@ async function handleFloatingDrawClick() {
 
     floatingMessageId = messageId;
 
-    const focusRequirement = window.prompt('本次花漫画的重点要求（可留空）：', '');
-    if (focusRequirement === null) return;
+    const focus = await openDrawFocusDialog({ messageId });
+    if (focus === null) return;
 
     try {
         await generateAndInsertImages({
-            messageId, focusRequirement: focusRequirement.trim(),
+            messageId, ...focus,
             onStateChange: (state, data, liveId) => {
                 setStateForMessage(liveId, state, data);
             }

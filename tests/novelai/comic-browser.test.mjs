@@ -314,3 +314,34 @@ test('image folding survives rerender, saved fallback and IndexedDB reload',asyn
   assert.equal(await h.page.evaluate(async prefix=>(await(await import(prefix+'modules/draw/shared/gallery-cache.js')).getPreview('fold-img')).collapseImages,prefix),true);
  } finally {await h.close();}
 });
+
+
+test('focus dialog supports multiline text, image previews, removal, submit and cancel', async () => {
+ const h = await harness();
+ try {
+  await h.page.evaluate(async prefix => {
+   const {openDrawFocusDialog} = await import(prefix+'modules/draw/shared/draw-focus-dialog.js');
+   window.openFocus = () => { window.focusResult = undefined; window.focusPromise = openDrawFocusDialog({messageId:7}).then(value => {window.focusResult=value;}); };
+   window.openFocus();
+  }, prefix);
+  await h.page.getByRole('textbox').fill('第一行\n第二行');
+  await h.page.locator('.nd-focus-dialog input[type=file]').setInputFiles({name:'reference.png',mimeType:'image/png',buffer:Buffer.from(base64.split(',')[1],'base64')});
+  await h.page.waitForSelector('.nd-focus-image img');
+  assert.equal(await h.page.locator('.nd-focus-image img').count(),1);
+  await h.page.getByRole('button',{name:'移除 reference.png',exact:true}).click();
+  assert.equal(await h.page.locator('.nd-focus-image img').count(),0);
+  await h.page.locator('.nd-focus-dialog input[type=file]').setInputFiles({name:'reference.png',mimeType:'image/png',buffer:Buffer.from(base64.split(',')[1],'base64')});
+  await h.page.waitForSelector('.nd-focus-image img');
+  await h.page.getByRole('button',{name:'提交',exact:true}).click();
+  const result=await h.page.evaluate(()=>window.focusPromise.then(()=>window.focusResult));
+  assert.equal(result.focusRequirement,'第一行\n第二行');
+  assert.equal(result.focusImages[0].url,base64);
+  await h.page.setViewportSize({width:390,height:700});
+  await h.page.evaluate(()=>window.openFocus());
+  const bounds=await h.page.locator('.nd-focus-dialog').boundingBox();
+  assert.ok(bounds.width<=390 && bounds.height<=700);
+  await h.page.getByRole('button',{name:'取消',exact:true}).click();
+  assert.equal(await h.page.evaluate(()=>window.focusPromise.then(()=>window.focusResult)),null);
+  assert.deepEqual(h.errors,[]);
+ } finally {await h.close();}
+});

@@ -188,3 +188,14 @@ test('comic prompt macros resolve through the host substituteParams function in 
     });
     assert.equal(calls.length, 3);
 });
+
+
+test('reference images survive comic messages and the hosted adapter payload', async () => {
+ const image={name:'reference.png',url:'data:image/png;base64,YQ=='};
+ const messages=buildComicMessages({source:'原正文',mode:'end',focusRequirement:'参考图片构图',focusImages:[image]});
+ assert.equal(messages.at(-1).content[1].image_url.url,image.url);
+ const {createAgentAdapter}=await import('../../modules/agent-core/dist/agent-core-browser.js');
+ const adapter=createAgentAdapter({provider:'sillytavern-openai-compatible',model:'vision',toolMode:'tagged-json'});
+ const payload=adapter.buildPayload({messages,tools:[]});
+ assert.equal(payload.messages.at(-1).content[1].image_url.url,image.url);
+});
