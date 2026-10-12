@@ -156,6 +156,12 @@ test('agent provider config preserves provider body params and timeout defaults'
  assert.equal(active.timeoutMs,12345);
 });
 
+test('comic messages include one-time focus requirements without changing source', () => {
+    const messages = buildComicMessages({ source: '她推开门。', mode: 'end', focusRequirement: '重点表现表情' });
+    assert.match(messages.at(-1).content, /<focus_requirement>\n重点表现表情\n<\/focus_requirement>/);
+    assert.doesNotMatch(messages.at(-1).content, /她推开门。.*重点表现表情/s);
+});
+
 test('comic prompt macros resolve through the host substituteParams function in group order', () => {
     const calls = [];
     const vars = new Map();

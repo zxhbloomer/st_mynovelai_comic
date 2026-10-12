@@ -22,14 +22,14 @@ export function createComicSnapshot(source, mode) {
     return snapshot;
 }
 
-export function buildComicMessages({ source, mode, maxImages = 0, opening = '', guide = '', rules = '', worldInfo = '' }) {
+export function buildComicMessages({ source, mode, maxImages = 0, opening = '', guide = '', rules = '', worldInfo = '', focusRequirement = '' }) {
     const snapshot = createComicSnapshot(source, mode);
     const placement = mode === 'inline'
         ? '每页在 image 块紧前输出 <manga_position>段落编号</manga_position>，例如 <manga_position>1</manga_position>；编号在给定范围内且非递减。位置标记在 image 外。'
         : '图片全部放在文章最后，不输出 manga_position 标记。';
     return [...(opening ? [{ role: 'system', content: opening }] : []), {
         role: 'system', content: `[MANGA_INDEPENDENT_V1]\n本次执行漫画转译，不续写或重写故事正文。只呈现目标正文事件，世界书仅用于参考。可先输出闭合的 thinking，随后按页序输出闭合的 comic_plan 与完整 image。必须完成实际图片描述，不能只输出规划。image 内保持完整 @page、@panel、@character 分段协议，不输出 JSON 或代码围栏。${placement}${maxImages > 0 ? `最多输出 ${maxImages} 个完整 image 块。` : ''}\n当前绘图模型指南：\n${guide}\n用户场景要求：\n${rules}\n本次只返回完整漫画文本协议，不调用 submit_scene_plan；模板中针对插图点或工具字段的要求仅适用模式①。`,
-    }, { role: 'user', content: `${worldInfo ? `<world_info>\n${worldInfo}\n</world_info>\n` : ''}<source_text>\n${snapshot.body}\n</source_text>\n段落定位表（不属于绘图描述）：\n${snapshot.paragraphs.map(p => `[段落 ${p.id}] ${p.content}`).join('\n\n')}` }];
+    }, { role: 'user', content: `${worldInfo ? `<world_info>\n${worldInfo}\n</world_info>\n` : ''}${focusRequirement ? `<focus_requirement>\n${focusRequirement}\n</focus_requirement>\n` : ''}<source_text>\n${snapshot.body}\n</source_text>\n段落定位表（不属于绘图描述）：\n${snapshot.paragraphs.map(p => `[段落 ${p.id}] ${p.content}`).join('\n\n')}` }];
 }
 
 export function createComicTasks({ source, response, mode, maxImages = 0 }) {

@@ -187,6 +187,7 @@ async function buildScenePlannerRequest(options = {}) {
         absoluteMaxCharactersPerImage = 0,
         modelGuide = null,
         plannerProfile = null,
+        focusRequirement = '',
     } = options;
     const profile = normalizeScenePlannerProfile(plannerProfile);
     const centerMode = profile.centerMode === 'normalized' ? 'normalized' : 'grid';
@@ -269,10 +270,12 @@ async function buildScenePlannerRequest(options = {}) {
             await expandScenePromptText(userTaskTemplate, runtime),
             slotValues,
         ).trim();
+        const focus = String(focusRequirement || '').trim();
+        const finalUserTask = focus ? `${userTask}\n\n<focus_requirement>\n${focus}\n</focus_requirement>` : userTask;
 
         const prompt = {
             systemPrompt,
-            messages: [{ role: 'user', content: userTask }],
+            messages: [{ role: 'user', content: finalUserTask }],
         };
         await emitScenePromptReady(runtime, [
             ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),

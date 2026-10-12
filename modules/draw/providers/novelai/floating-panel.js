@@ -957,9 +957,12 @@ async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
     if (!panelData || panelData.state !== FloatState.IDLE) return;
 
+    const focusRequirement = window.prompt('本次花漫画的重点要求（可留空）：', '');
+    if (focusRequirement === null) return;
+
     try {
         await generateAndInsertImages({
-            messageId,
+            messageId, focusRequirement: focusRequirement.trim(),
             onStateChange: (state, data, liveId) => {
                 setStateForMessage(liveId, state, data);
             }
@@ -1547,9 +1550,12 @@ async function handleFloatingDrawClick() {
 
     floatingMessageId = messageId;
 
+    const focusRequirement = window.prompt('本次花漫画的重点要求（可留空）：', '');
+    if (focusRequirement === null) return;
+
     try {
         await generateAndInsertImages({
-            messageId,
+            messageId, focusRequirement: focusRequirement.trim(),
             onStateChange: (state, data, liveId) => {
                 setStateForMessage(liveId, state, data);
             }
