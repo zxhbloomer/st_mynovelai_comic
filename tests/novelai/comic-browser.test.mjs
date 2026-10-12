@@ -345,3 +345,40 @@ test('focus dialog supports multiline text, image previews, removal, submit and 
   assert.deepEqual(h.errors,[]);
  } finally {await h.close();}
 });
+
+test('focus history keeps 20 unique submissions, restores last text and supports safe selection', async () => {
+ const h = await harness();
+ try {
+  const setup = async () => h.page.evaluate(async prefix => {
+   const {openDrawFocusDialog} = await import(prefix+'modules/draw/shared/draw-focus-dialog.js');
+   window.openFocus = () => { window.focusPromise = openDrawFocusDialog({messageId:7}); };
+  }, prefix);
+  await setup();
+  await h.page.evaluate(async () => {
+   for (let i=0;i<21;i++) {
+    window.openFocus(); document.querySelector('#nd-focus-text').value=`提示词${i}`;
+    document.querySelector('.nd-focus-submit').click(); await window.focusPromise;
+   }
+   window.openFocus(); document.querySelector('#nd-focus-text').value='提示词5';
+   document.querySelector('.nd-focus-submit').click(); await window.focusPromise;
+  });
+  const stored=await h.page.evaluate(()=>JSON.parse(localStorage.getItem('st-mynovelai-comic:focus-history')));
+  assert.equal(stored.items.length,20); assert.equal(stored.items[0],'提示词5');
+  assert.equal(stored.items.includes('提示词0'),false);
+  await h.page.reload(); await setup(); await h.page.evaluate(()=>window.openFocus());
+  assert.equal(await h.page.locator('#nd-focus-text').inputValue(),'提示词5');
+  await h.page.getByRole('button',{name:'选择历史提示词',exact:true}).click();
+  assert.equal(await h.page.locator('.nd-focus-history-list button').count(),20);
+  await h.page.locator('.nd-focus-history-list button').filter({hasText:/^提示词20$/}).click();
+  assert.equal(await h.page.locator('#nd-focus-text').inputValue(),'提示词20');
+  assert.equal(await h.page.locator('.nd-focus-history-dialog').count(),0);
+  await h.page.locator('.nd-focus-dialog .nd-focus-cancel').click();
+  assert.equal(await h.page.evaluate(()=>window.focusPromise),null);
+  assert.deepEqual(await h.page.evaluate(()=>JSON.parse(localStorage.getItem('st-mynovelai-comic:focus-history'))),stored);
+  await h.page.evaluate(()=>window.openFocus()); await h.page.locator('#nd-focus-text').fill('');
+  await h.page.locator('.nd-focus-submit').click();
+  assert.equal(await h.page.evaluate(()=>JSON.parse(localStorage.getItem('st-mynovelai-comic:focus-history')).last),'');
+  assert.equal(await h.page.evaluate(()=>JSON.parse(localStorage.getItem('st-mynovelai-comic:focus-history')).items.length),20);
+  assert.deepEqual(h.errors,[]);
+ } finally {await h.close();}
+});

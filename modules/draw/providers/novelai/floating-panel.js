@@ -138,7 +138,7 @@ const STYLES = `
 }
 
 .nd-capsule {
-    width: 92px;
+    width: 164px;
     height: var(--nd-h);
     background: var(--nd-bg);
     border: 1px solid var(--nd-border);
@@ -210,6 +210,8 @@ const STYLES = `
     font-size: 13px;
     white-space: nowrap;
 }
+.nd-btn-clear { flex: 0 0 70px; font-size: 12px; }
+.nd-sep { flex-shrink: 0; }
 .nd-btn-draw:hover { background: rgba(255, 255, 255, 0.12); }
 .nd-btn-draw:active { transform: scale(0.92); }
 
@@ -612,7 +614,10 @@ function createFloorPanelElement(messageId) {
     const menuBtn = createEl('button', 'nd-btn-menu');
     menuBtn.title = '展开菜单';
     menuBtn.appendChild(createEl('span', 'nd-arrow', '▼'));
-    layerIdle.append(drawBtn, sep, menuBtn);
+    const clearBtn = createEl('button', 'nd-btn-draw nd-btn-clear nd-clear-floor-images', '清空图片');
+    clearBtn.type = 'button';
+    clearBtn.title = '清空本楼层图片';
+    layerIdle.append(drawBtn, sep, clearBtn, createEl('div', 'nd-sep'), menuBtn);
 
     const layerActive = createEl('div', 'nd-layer nd-layer-active');
     layerActive.append(
@@ -1001,11 +1006,12 @@ async function handleFloorAbort(messageId) {
 
 function bindFloorPanelEvents(panelData) {
     const { messageId, root: el } = panelData;
-    el.querySelector('.nd-clear-floor-images')?.addEventListener('click', async (e) => {
+    const clearButtons = el.querySelectorAll('.nd-clear-floor-images');
+    clearButtons.forEach(button => button.addEventListener('click', async (e) => {
         e.stopPropagation();
         const button = e.currentTarget;
         if (button.disabled) return;
-        button.disabled = true;
+        clearButtons.forEach(control => { control.disabled = true; });
         const target = captureDrawCancellationTarget(messageId);
         try {
             const pending = await getPendingDrawWorkState(messageId);
@@ -1020,9 +1026,9 @@ function bindFloorPanelEvents(panelData) {
             console.error('[花漫画] 清空本楼层图片失败:', error);
             toastr?.error?.(error.message);
         } finally {
-            button.disabled = false;
+            clearButtons.forEach(control => { control.disabled = false; });
         }
-    });
+    }));
 
     el.querySelector('.nd-btn-draw')?.addEventListener('click', (e) => {
         e.stopPropagation();

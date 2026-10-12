@@ -244,7 +244,7 @@ export function ensureDrawImageStyles() {
 .xb-nd-img[data-state="pending"]{border:1px dashed rgba(212,165,116,0.4);background:rgba(212,165,116,0.06);padding:18px;color:inherit}
 .xb-nd-img.busy img{opacity:0.5}
 .xb-nd-img-wrap{position:relative;overflow:hidden;border-radius:10px;touch-action:pan-y pinch-zoom}
-.xb-nd-img img{width:auto;height:auto;max-width:100%;border-radius:10px;cursor:pointer;box-shadow:0 3px 15px rgba(0,0,0,0.25);display:block;user-select:none;-webkit-user-drag:none;transition:transform 0.25s ease,opacity 0.2s ease}
+.xb-nd-img img{width:auto;height:auto;max-width:100%;margin-left:auto;margin-right:auto;border-radius:10px;cursor:pointer;box-shadow:0 3px 15px rgba(0,0,0,0.25);display:block;user-select:none;-webkit-user-drag:none;transition:transform 0.25s ease,opacity 0.2s ease}
 .xb-nd-img img.sliding-left{animation:ndSlideOutLeft 0.25s ease forwards;will-change:transform,opacity}
 .xb-nd-img img.sliding-right{animation:ndSlideOutRight 0.25s ease forwards;will-change:transform,opacity}
 .xb-nd-img img.sliding-in-left{animation:ndSlideInLeft 0.25s ease forwards;will-change:transform,opacity}

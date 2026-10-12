@@ -1,4 +1,21 @@
 let activeDialog = null;
+const FOCUS_HISTORY_KEY = 'st-mynovelai-comic:focus-history';
+
+function readFocusHistory() {
+    try {
+        const value = JSON.parse(localStorage.getItem(FOCUS_HISTORY_KEY) || '{}');
+        return { last: typeof value.last === 'string' ? value.last : '',
+            items: [...new Set((Array.isArray(value.items) ? value.items : [])
+                .filter(item => typeof item === 'string' && item.trim()).map(item => item.trim()))].slice(0, 20) };
+    } catch { return { last: '', items: [] }; }
+}
+
+function rememberFocus(text) {
+    const history = readFocusHistory();
+    const items = text ? [text, ...history.items.filter(item => item !== text)].slice(0, 20) : history.items;
+    try { localStorage.setItem(FOCUS_HISTORY_KEY, JSON.stringify({ last: text, items })); }
+    catch { /* Storage failure must not block generation. */ }
+}
 
 export function withFocusImages(text, images = []) {
     if (!images.length) return text;
@@ -24,6 +41,10 @@ export function openDrawFocusDialog({ messageId } = {}) {
             .nd-focus-header h2 {margin:0;font-size:20px;color:#fff;}
             .nd-focus-subtitle {margin:6px 0 0;color:#aaaab8;font-size:13px;}
             .nd-focus-body {padding:20px 24px;overflow:auto;flex:1;min-height:0;}
+            .nd-focus-history {margin-bottom:10px;}
+            .nd-focus-history-dialog {width:min(620px,calc(100vw - 48px));height:min(520px,calc(100dvh - 48px));}
+            .nd-focus-history-list {display:flex;flex-direction:column;gap:10px;}
+            .nd-focus-history-list button {text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;max-height:160px;overflow:auto;flex-shrink:0;}
             .nd-focus-label {display:block;margin-bottom:9px;font-weight:600;}
             .nd-focus-dialog textarea {display:block;width:100%;min-height:200px;resize:vertical;padding:14px;border:1px solid #555560;border-radius:10px;background:#34343d;color:#fff;font:inherit;line-height:1.7;}
             .nd-focus-dialog textarea:focus {outline:2px solid #d4a574;outline-offset:2px;}
@@ -48,6 +69,7 @@ export function openDrawFocusDialog({ messageId } = {}) {
               <header class="nd-focus-header"><div><h2 id="nd-focus-title">花漫画 · 本次生成要求</h2><p class="nd-focus-subtitle"></p></div><button type="button" class="nd-focus-close" aria-label="关闭">×</button></header>
               <div class="nd-focus-body">
                 <label class="nd-focus-label" for="nd-focus-text">重点要求</label>
+                <button type="button" class="nd-focus-history">选择历史提示词</button>
                 <textarea id="nd-focus-text" placeholder="例如：重点表现人物表情，多用近景。可填写多行，也可以留空。"></textarea>
                 <section class="nd-focus-upload" aria-label="参考图片附件">
                   <button type="button" class="nd-focus-add">添加参考图片</button><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
@@ -60,6 +82,8 @@ export function openDrawFocusDialog({ messageId } = {}) {
         dialog.setAttribute('aria-labelledby', 'nd-focus-title');
         dialog.querySelector('.nd-focus-subtitle').textContent = `目标楼层：${messageId} · 仅用于本次生成`;
         const textarea = dialog.querySelector('textarea');
+        textarea.value = readFocusHistory().last;
+        let historyDialog = null;
         const submit = dialog.querySelector('.nd-focus-submit');
         const input = dialog.querySelector('input');
         const list = dialog.querySelector('.nd-focus-images');
@@ -69,6 +93,8 @@ export function openDrawFocusDialog({ messageId } = {}) {
         function finish(value) {
             if (activeDialog !== dialog) return;
             activeDialog = null;
+            historyDialog?.close();
+            historyDialog?.remove();
             dialog.close();
             dialog.remove();
             previousFocus?.focus?.();
@@ -115,7 +141,36 @@ export function openDrawFocusDialog({ messageId } = {}) {
         dialog.querySelector('.nd-focus-close').onclick = () => finish(null);
         dialog.querySelector('.nd-focus-cancel').onclick = () => finish(null);
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(null); });
-        submit.onclick = () => finish({ focusRequirement: textarea.value.trim(), focusImages: images.slice() });
+        dialog.querySelector('.nd-focus-history').onclick = () => {
+            if (historyDialog) return;
+            const picker = document.createElement('dialog');
+            historyDialog = picker;
+            picker.className = 'nd-focus-dialog nd-focus-history-dialog';
+            picker.setAttribute('aria-labelledby', 'nd-focus-history-title');
+            picker.innerHTML = `<div class="nd-focus-shell">
+                <header class="nd-focus-header"><div><h2 id="nd-focus-history-title">历史提示词</h2><p class="nd-focus-subtitle">最近20条 · 最新提交在前</p></div><button type="button" class="nd-focus-close" aria-label="关闭">×</button></header>
+                <div class="nd-focus-body nd-focus-history-list"></div>
+                <footer class="nd-focus-footer"><button type="button" class="nd-focus-cancel">取消</button></footer></div>`;
+            const closePicker = () => { picker.close(); picker.remove(); historyDialog = null; textarea.focus(); };
+            picker.querySelector('.nd-focus-close').onclick = closePicker;
+            picker.querySelector('.nd-focus-cancel').onclick = closePicker;
+            picker.addEventListener('cancel', event => { event.preventDefault(); closePicker(); });
+            const list = picker.querySelector('.nd-focus-history-list');
+            const items = readFocusHistory().items;
+            if (!items.length) list.textContent = '暂无已提交的提示词';
+            for (const text of items) {
+                const button = document.createElement('button');
+                button.type = 'button'; button.textContent = text;
+                button.onclick = () => { textarea.value = text; closePicker(); };
+                list.append(button);
+            }
+            document.body.append(picker); picker.showModal();
+        };
+        submit.onclick = () => {
+            const text = textarea.value.trim();
+            rememberFocus(text);
+            finish({ focusRequirement: text, focusImages: images.slice() });
+        };
         dialog.querySelector('.nd-focus-add').onclick = () => input.click();
         input.onchange = () => { void addFiles(Array.from(input.files)); input.value = ''; };
         dialog.addEventListener('dragover', event => event.preventDefault());
