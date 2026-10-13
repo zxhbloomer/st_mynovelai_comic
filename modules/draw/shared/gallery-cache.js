@@ -721,6 +721,16 @@ export async function getPreview(imgId) {
     });
 }
 
+export async function getPreviewsByMessageId(messageId, chatId = '') {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = database.transaction(DB_STORE, 'readonly');
+        const request = tx.objectStore(DB_STORE).index('messageId').getAll(String(messageId));
+        request.onsuccess = () => resolve((request.result || []).filter(item => !chatId || String(item.chatId) === String(chatId)).sort((a, b) => String(a.slotId).localeCompare(String(b.slotId), undefined, { numeric: true })));
+        request.onerror = () => reject(request.error);
+    });
+}
+
 export async function getPreviewsBySlot(slotId) {
     const cached = getCachedPreviews(slotId);
     if (cached) return cached;
@@ -1368,3 +1378,4 @@ export function destroyGalleryCache() {
     }
     dbOpening = null;
 }
+

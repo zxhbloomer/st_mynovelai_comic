@@ -14,8 +14,8 @@ const savedEntries = message => {
 export function getStoryFloors(chat = []) {
     return chat.map((message, messageId) => isStoryMessage(message) ? { messageId, message } : null).filter(Boolean);
 }
-export function buildReaderFloor(message, mode = 'points', savedState = null) {
-    const entries = savedEntries(message);
+export function buildReaderFloor(message, mode = 'points', savedState = null, previewEntries = null) {
+    const entries = previewEntries ? previewEntries.map(entry => ({ slotId: entry.slotId, entry })) : savedEntries(message);
     const pages = entries.map(({ slotId, entry }, index) => ({
         index,
         slotId,
@@ -36,4 +36,5 @@ export function getAdjacentStoryFloor(floors, messageId, direction) {
     return floors[index + (direction < 0 ? -1 : 1)] || null;
 }
 export { isStoryMessage };
+
 
