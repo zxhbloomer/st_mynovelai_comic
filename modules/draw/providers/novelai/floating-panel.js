@@ -1,5 +1,5 @@
 import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
-import { createComicReader } from '../../shared/comic-reader.js';
+import { createComicReader, getLastReaderPosition } from '../../shared/comic-reader.js';
 import { showGenerationOverlay, hideGenerationOverlay } from '../../shared/generation-overlay.js';
 import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
 ﻿// floating-panel.js
@@ -1710,7 +1710,9 @@ function createFloatingButton() {
     const menuBtn = createEl('button', 'nd-btn-menu');
     menuBtn.title = '展开菜单';
     menuBtn.appendChild(createEl('span', 'nd-arrow', '▲'));
-    layerIdle.append(drawBtn, sep, menuBtn);
+    const readerBtn = createEl('button', 'nd-btn-draw nd-btn-reader', '阅读漫画');
+    readerBtn.type = 'button';
+    layerIdle.append(drawBtn, sep, readerBtn, menuBtn);
     const layerActive = createEl('div', 'nd-layer nd-layer-active');
     layerActive.append(
         createEl('span', 'nd-status-icon', '⏳'),
@@ -1743,6 +1745,12 @@ function createFloatingButton() {
 
     $floatingCache.autoToggle?.addEventListener('click', async () => {
         await toggleQuickAutoMode();
+    });
+
+    floatingEl.querySelector('.nd-btn-reader')?.addEventListener('click', async () => {
+        const position = getLastReaderPosition();
+        if (!position?.messageId) { toastr?.error?.('暂无阅读记录'); return; }
+        try { await openComicReaderForFloor(position.messageId); } catch (error) { toastr?.error?.(error.message || String(error)); }
     });
 
     floatingEl.querySelector('.nd-settings-btn')?.addEventListener('click', () => {
@@ -1882,5 +1890,6 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 

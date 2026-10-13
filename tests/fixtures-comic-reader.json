@@ -1,0 +1,7 @@
+{
+  "mode": "points",
+  "messages": [
+    {"is_user": false, "mes": "故事正文", "extra": {"xiaobaixDrawSaved": {"slot-1": {"savedUrl": "/images/a.png", "comic": {"mode": "points", "image": "<image>page</image>"}}}}},
+    {"is_user": true, "mes": "用户输入"}
+  ]
+}

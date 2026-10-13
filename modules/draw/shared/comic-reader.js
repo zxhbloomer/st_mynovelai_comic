@@ -1,5 +1,8 @@
 import { getAdjacentStoryFloor } from './comic-reader-model.js';
 
+let lastReaderPosition = null;
+export const getLastReaderPosition = () => lastReaderPosition ? { ...lastReaderPosition } : null;
+
 export const normalizeReaderIndex = (index, count) => Math.max(0, Math.min(Math.max(0, count - 1), Number(index) || 0));
 export const getReaderPageTarget = ({ pageIndex, pageCount, floorIndex, floorCount, direction }) => {
     if (direction < 0 && pageIndex <= 0 && floorIndex > 0) return { type: 'floor', floorIndex: floorIndex - 1, pageIndex: -1 };
@@ -38,7 +41,7 @@ export function createComicReader(options = {}) {
         const count = floor?.pages?.length || 0; meta.textContent = count ? `当前 ${pageIndex + 1} 张漫画，共 ${count} 张漫画` : '当前 0 张漫画，共 0 张漫画';
         summary.textContent = `简单的剧情：${floor?.summary || '暂无简介'}`;
         floorInput.value = floor?.messageId ?? '';
-        options.onStateChange?.(state, floor, pageIndex);
+        lastReaderPosition = { chatId: state.chatId, messageId: floor?.messageId, pageIndex }; options.onStateChange?.(state, floor, pageIndex);
     };
     const selectFloor = index => { if (!floors[index]) return; floorIndex = index; pageIndex = 0; render(); };
     const moveFloor = direction => { const target = getAdjacentStoryFloor(floors, current()?.messageId, direction); if (target) selectFloor(floors.indexOf(target)); };
@@ -66,3 +69,4 @@ export function createComicReader(options = {}) {
 }
 
 export async function openComicReader(options) { return createComicReader(options).open(); }
+
