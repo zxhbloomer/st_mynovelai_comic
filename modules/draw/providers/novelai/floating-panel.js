@@ -1033,6 +1033,11 @@ function bindFloorPanelEvents(panelData) {
         handleFloorDrawClick(messageId);
     });
 
+    el.querySelector('.nd-btn-reader')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try { await openComicReaderForFloor(messageId); } catch (error) { toastr?.error?.(error.message || String(error)); }
+    });
+
     el.querySelector('.nd-btn-menu')?.addEventListener('click', (e) => {
         e.stopPropagation();
         el.classList.remove('show-detail');
@@ -1540,7 +1545,11 @@ function onFloatingPointerUp(e) {
 }
 
 function routeFloatingClick(target) {
-    if (target.closest('.nd-btn-draw')) {
+    if (target.closest('.nd-btn-reader')) {
+        const position = getLastReaderPosition();
+        if (position?.messageId != null) void openComicReaderForFloor(position.messageId);
+        else toastr?.error?.('暂无阅读记录');
+    } else if (target.closest('.nd-btn-draw')) {
         handleFloatingDrawClick();
     } else if (target.closest('.nd-btn-menu')) {
         floatingEl.classList.remove('show-detail');
@@ -1907,6 +1916,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
