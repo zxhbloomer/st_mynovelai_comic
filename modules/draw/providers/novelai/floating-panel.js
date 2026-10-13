@@ -1,5 +1,6 @@
 import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
 import { createComicReader } from '../../shared/comic-reader.js';
+import { showGenerationOverlay, hideGenerationOverlay } from '../../shared/generation-overlay.js';
 import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
 ﻿// floating-panel.js
 /**
@@ -963,28 +964,22 @@ function updateFloorDetailPopup(messageId) {
 async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
     if (!panelData || panelData.state !== FloatState.IDLE) return;
-
+    const message = getContext()?.chat?.[messageId];
+    const saved = message?.extra?.xiaobaixDrawSaved || message?.extra?.novelAiDrawSaved;
+    const hasContent = saved && Object.keys(saved).length > 0;
+    if (hasContent && !window.confirm('本楼层已有漫画，是否重新生成？重新生成将清空本楼层现有图片及描述，并按本次要求重新生成。')) return;
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
-
+    showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
-        await generateAndInsertImages({
-            messageId, ...focus,
-            onStateChange: (state, data, liveId) => {
-                setStateForMessage(liveId, state, data);
-            }
-        });
+        if (hasContent) await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+        await generateAndInsertImages({ messageId, ...focus, onStateChange: (state, data, liveId) => setStateForMessage(liveId, state, data) });
     } catch (error) {
         if (error.drawTaskReported) return;
-        if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) {
-            toastr?.info?.(error.message);
-        } else {
-            console.error(error);
-            toastr?.error?.(error.message);
-        }
-    }
+        if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
+        else { console.error(error); toastr?.error?.(error.message); }
+    } finally { hideGenerationOverlay(); }
 }
-
 async function handleFloorAbort(messageId) {
     const target = captureDrawCancellationTarget(messageId);
     try {
@@ -1887,4 +1882,5 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
