@@ -1153,13 +1153,24 @@ async function toggleQuickAutoMode() {
     );
 }
 
+async function handleReaderRegenerate(messageId) {
+    const confirmed = window.confirm('本楼层已有漫画，是否清空后重新生成？');
+    if (!confirmed) return;
+    const focus = await openDrawFocusDialog({ messageId });
+    if (focus === null) return;
+    await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+    showGenerationOverlay('正在生成中，请勿关闭页面');
+    try {
+        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => setStateForMessage(liveId, state, data) });
+    } finally { hideGenerationOverlay(); }
+}
 async function openComicReaderForFloor(messageId) {
     const ctx = getContext();
     const chatId = String(ctx?.chatId || ctx?.chat?.id || ctx?.chat?.name || 'current');
     const stateStore = createReaderStateStore(ComicReaderStorage);
     const savedState = await stateStore.load(chatId).catch(() => null);
     const floors = await Promise.all(getStoryFloors(ctx?.chat || []).map(async ({ messageId: id, message }) => ({ messageId: id, generating: Boolean(getGenerationPhase(id)), ...buildReaderFloor(message, 'points', { ...(savedState?.floors?.[String(id)] || {}), messageId: id }, await getPreviewsByMessageId(id, chatId).catch(() => null)) })));
-    const reader = createComicReader({ initialPageIndex: savedState?.floors?.[String(messageId)]?.pageIndex || 0, messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id), onStateChange: async (state, floor, pageIndex) => {
+    const reader = createComicReader({ initialPageIndex: savedState?.floors?.[String(messageId)]?.pageIndex || 0, messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleReaderRegenerate(id), onStateChange: async (state, floor, pageIndex) => {
         const current = await stateStore.load(chatId).catch(() => null) || { chatId, floors: {}, lastFloorId: null };
         current.floors ||= {};
         current.floors[String(floor.messageId)] = { title: floor.chapterTitle, summary: floor.summary, pageIndex };
@@ -1928,6 +1939,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
