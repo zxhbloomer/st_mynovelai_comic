@@ -143,7 +143,7 @@ const STYLES = `
 }
 
 .nd-capsule {
-    width: 164px;
+    width: max-content;`n    min-width: 260px;
     height: var(--nd-h);
     background: var(--nd-bg);
     border: 1px solid var(--nd-border);
@@ -215,7 +215,7 @@ const STYLES = `
     font-size: 13px;
     white-space: nowrap;
 }
-.nd-btn-clear { flex: 0 0 70px; font-size: 12px; }
+.nd-btn-clear { flex: 0 0 auto; min-width: 70px; font-size: 12px; padding: 0 10px; }
 .nd-float:not(.nd-floating-global) .nd-capsule { width: 360px; }
 .nd-float:not(.nd-floating-global) .nd-btn-reader { flex: 0 0 78px; font-size: 12px; }
 .nd-sep { flex-shrink: 0; }
@@ -1918,6 +1918,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
