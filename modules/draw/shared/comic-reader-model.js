@@ -19,7 +19,7 @@ export function buildReaderFloor(message, mode = 'points', savedState = null, pr
     const pages = entries.map(({ slotId, entry }, index) => ({
         index,
         slotId,
-        url: entry.savedUrl,
+        url: entry.savedUrl || entry.base64 || entry.url || '',
         imgId: entry.imgId || '',
         description: entry.comic?.image || entry.positive || '',
         mode: entry.comic?.mode || mode,
@@ -36,5 +36,6 @@ export function getAdjacentStoryFloor(floors, messageId, direction) {
     return floors[index + (direction < 0 ? -1 : 1)] || null;
 }
 export { isStoryMessage };
+
 
 
