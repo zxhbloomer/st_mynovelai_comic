@@ -1,4 +1,6 @@
 import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
+import { createComicReader } from '../../shared/comic-reader.js';
+import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
 ﻿// floating-panel.js
 /**
  * NovelDraw 画图按钮面板 - 支持楼层按钮和悬浮按钮双模式
@@ -617,7 +619,9 @@ function createFloorPanelElement(messageId) {
     const clearBtn = createEl('button', 'nd-btn-draw nd-btn-clear nd-clear-floor-images', '清空图片');
     clearBtn.type = 'button';
     clearBtn.title = '清空本楼层图片';
-    layerIdle.append(drawBtn, sep, clearBtn, createEl('div', 'nd-sep'), menuBtn);
+    const readerBtn = createEl('button', 'nd-btn-draw nd-btn-reader', '阅读漫画');
+    readerBtn.type = 'button';
+    layerIdle.append(drawBtn, sep, clearBtn, createEl('div', 'nd-sep'), readerBtn, createEl('div', 'nd-sep'), menuBtn);
 
     const layerActive = createEl('div', 'nd-layer nd-layer-active');
     layerActive.append(
@@ -676,9 +680,6 @@ function createFloorPanelElement(messageId) {
     controls.append(autoToggle, settingsBtn);
 
     menu.append(card, controls);
-    const clearButton = createEl('button', 'nd-clear-floor-images menu_button', '清空本楼层图片');
-    clearButton.type = 'button';
-    menu.appendChild(clearButton);
 
     root.append(capsule, detail, menu);
     return root;
@@ -1135,6 +1136,13 @@ async function toggleQuickAutoMode() {
         nextMode === 'auto' ? '自动配图已开启' : '自动配图已关闭',
         updateAutoModeUI,
     );
+}
+
+async function openComicReaderForFloor(messageId) {
+    const ctx = getContext();
+    const floors = getStoryFloors(ctx?.chat || []).map(({ messageId: id, message }) => ({ messageId: id, ...buildReaderFloor(message, 'points', { messageId: id }) }));
+    const reader = createComicReader({ messageId, chatId: ctx?.chatId || '', getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id) });
+    await reader.open();
 }
 
 function mountFloorPanel(messageEl, messageId) {
@@ -1879,3 +1887,4 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
