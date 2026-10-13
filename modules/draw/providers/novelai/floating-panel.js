@@ -1759,8 +1759,15 @@ function createFloatingButton() {
 
     floatingEl.querySelector('.nd-btn-reader')?.addEventListener('click', async () => {
         const position = getLastReaderPosition();
-        if (!position?.messageId) { toastr?.error?.('暂无阅读记录'); return; }
-        try { await openComicReaderForFloor(position.messageId); } catch (error) { toastr?.error?.(error.message || String(error)); }
+        let messageId = position?.messageId;
+        if (!messageId) {
+            const ctx = getContext();
+            const chatId = String(ctx?.chatId || ctx?.chat?.id || ctx?.chat?.name || 'current');
+            const saved = await ComicReaderStorage.get(chat:, null).catch(() => null);
+            messageId = saved?.lastFloorId;
+        }
+        if (messageId == null) { toastr?.error?.('暂无阅读记录'); return; }
+        try { await openComicReaderForFloor(Number(messageId)); } catch (error) { toastr?.error?.(error.message || String(error)); }
     });
 
     floatingEl.querySelector('.nd-settings-btn')?.addEventListener('click', () => {
@@ -1900,6 +1907,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
