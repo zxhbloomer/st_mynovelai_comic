@@ -19,3 +19,5 @@ export const EnaPlannerStorage = createStorage('HuaManhua_EnaPlanner.json', { de
 export const CommonSettingStorage = createStorage('HuaManhua_CommonSettings.json', { debounceMs: 1000 });
 export const VectorStorage = createStorage('HuaManhua_Vectors.json', { debounceMs: 3000 });
 
+
+export const ComicReaderStorage = createStorage('HuaManhua_ComicReader.json', { debounceMs: 800 });

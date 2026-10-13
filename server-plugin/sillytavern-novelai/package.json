@@ -1,6 +1,6 @@
 {
     "name": "sillytavern-novelai",
-    "version": "1.1.10",
+    "version": "1.2.0",
     "type": "commonjs",
     "main": "index.js",
     "description": "Standalone NovelAI image jobs for SillyTavern.",
@@ -9,5 +9,6 @@
         "node": ">=18.0.0"
     }
 }
+
 
 
