@@ -1,5 +1,5 @@
 import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
-import { createComicReader, getLastReaderPosition } from '../../shared/comic-reader.js';
+import { createComicReader, getLastReaderPosition, isComicReaderOpen } from '../../shared/comic-reader.js';
 import { showGenerationOverlay, hideGenerationOverlay } from '../../shared/generation-overlay.js';
 import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
 import { getPreviewsByMessageId } from '../../shared/gallery-cache.js';
@@ -985,7 +985,7 @@ async function handleFloorDrawClick(messageId) {
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
         if (hasContent) await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
-        await generateAndInsertImages({ messageId, ...focus, onStateChange: (state, data, liveId) => setStateForMessage(liveId, state, data) });
+        await generateAndInsertImages({ messageId, ...focus, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
     } catch (error) {
         if (error.drawTaskReported) return;
         if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
@@ -1926,6 +1926,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 

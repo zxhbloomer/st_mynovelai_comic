@@ -1,6 +1,8 @@
 import { getAdjacentStoryFloor } from './comic-reader-model.js';
 
 let lastReaderPosition = null;
+let readerOpen = false;
+export const isComicReaderOpen = () => readerOpen;
 export const getLastReaderPosition = () => lastReaderPosition ? { ...lastReaderPosition } : null;
 
 export const normalizeReaderIndex = (index, count) => Math.max(0, Math.min(Math.max(0, count - 1), Number(index) || 0));
@@ -10,7 +12,7 @@ export const getReaderPageTarget = ({ pageIndex, pageCount, floorIndex, floorCou
     return { type: 'page', pageIndex: normalizeReaderIndex(pageIndex + (direction < 0 ? -1 : 1), pageCount) };
 };
 
-const styleText = `.xb-comic-reader{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center}.xb-comic-reader-dialog{width:min(96vw,1100px);height:min(94vh,900px);background:var(--SmartThemeBlurTintColor,#202020);color:var(--SmartThemeBodyColor,#eee);display:flex;flex-direction:column;border-radius:8px;overflow:hidden}.xb-comic-reader-head{position:relative;text-align:center;padding:12px 56px 8px;font-size:18px}.xb-comic-reader-close{position:absolute;right:12px;top:8px}.xb-comic-reader-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 20px}.xb-comic-reader-image{max-width:calc(100% - 90px);max-height:100%;object-fit:contain}.xb-comic-reader-empty{opacity:.8;text-align:center}.xb-comic-reader-arrow{font-size:28px;min-width:38px}.xb-comic-reader-meta{text-align:center;padding:8px}.xb-comic-reader-summary{padding:8px 18px;max-height:100px;overflow:auto}.xb-comic-reader-toolbar{display:flex;gap:6px;align-items:center;justify-content:center;padding:8px;border-top:1px solid rgba(255,255,255,.15)}.xb-comic-reader-floor{width:80px}`;
+const styleText = `.xb-comic-reader{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center}.xb-comic-reader-dialog{width:min(96vw,1180px);height:min(94vh,920px);background:var(--SmartThemeBlurTintColor,#202020);color:var(--SmartThemeBodyColor,#eee);display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.16);border-radius:14px;overflow:hidden;box-shadow:0 24px 80px #000b}.xb-comic-reader-head{position:relative;text-align:center;padding:14px 56px 12px;font-size:18px;border-bottom:1px solid rgba(255,255,255,.12)}.xb-comic-reader-close{position:absolute;right:12px;top:10px;width:32px;height:32px;border:0;border-radius:8px;background:rgba(255,255,255,.88);color:#555;font-size:20px}.xb-comic-reader-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:18px;padding:18px 24px;background:rgba(0,0,0,.12)}.xb-comic-reader-image{max-width:calc(100% - 110px);max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 8px 30px #0008}.xb-comic-reader-empty{opacity:.8;text-align:center;font-size:18px}.xb-comic-reader-arrow{font-size:28px;min-width:42px;height:42px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.9);color:#666}.xb-comic-reader-meta{text-align:center;padding:8px;font-size:15px}.xb-comic-reader-summary{padding:10px 18px;max-height:110px;overflow:auto;border-top:1px solid rgba(255,255,255,.1)}.xb-comic-reader-toolbar{display:flex;gap:6px;align-items:center;justify-content:center;padding:10px;border-top:1px solid rgba(255,255,255,.15)}.xb-comic-reader-toolbar button{min-height:34px;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:7px;background:rgba(255,255,255,.9);color:#555}.xb-comic-reader-floor{width:80px;min-height:34px}`
 
 export function createComicReader(options = {}) {
     const doc = options.document || globalThis.document;
@@ -55,7 +57,7 @@ export function createComicReader(options = {}) {
         render();
     }
     const onKey = event => { if (!overlay || event.target?.matches?.('input,textarea,select,button') || doc.querySelector('#xb-generation-overlay')) return; if (event.key === 'Escape') close(); else if (event.key === 'ArrowLeft') move(-1); else if (event.key === 'ArrowRight') move(1); else if (event.key === 'PageUp') { event.preventDefault(); moveFloor(-1); } else if (event.key === 'PageDown') { event.preventDefault(); moveFloor(1); } };
-    function close() { doc.removeEventListener('keydown', onKey); overlay?.remove(); overlay = null; options.onClose?.(); }
+    function close() { doc.removeEventListener('keydown', onKey); overlay?.remove(); overlay = null; readerOpen = false; options.onClose?.(); }
     async function open() {
         ensureStyle(); floors = await Promise.resolve(options.getFloors?.() || []); if (!floors.length) throw new Error('没有可阅读的故事楼层');
         floorIndex = Math.max(0, floors.findIndex(floor => Number(floor.messageId) === Number(state.messageId))); if (floorIndex < 0) floorIndex = 0; pageIndex = normalizeReaderIndex(options.initialPageIndex ?? 0, floors[floorIndex]?.pages?.length || 0);
@@ -64,12 +66,14 @@ export function createComicReader(options = {}) {
         const head = doc.createElement('div'); head.className = 'xb-comic-reader-head'; const title = doc.createElement('div'); title.className = 'xb-comic-reader-title'; head.append(title); const closeButton = doc.createElement('button'); closeButton.className = 'xb-comic-reader-close'; closeButton.textContent = '×'; closeButton.onclick = close; head.append(closeButton); dialog.append(head);
         const body = doc.createElement('div'); body.className = 'xb-comic-reader-body'; dialog.append(body); const summary = doc.createElement('div'); summary.className = 'xb-comic-reader-summary'; dialog.append(summary); const meta = doc.createElement('div'); meta.className = 'xb-comic-reader-meta'; dialog.append(meta);
         const toolbar = doc.createElement('div'); toolbar.className = 'xb-comic-reader-toolbar'; const prevFloor = doc.createElement('button'); prevFloor.textContent = '上一故事楼层'; prevFloor.onclick = () => moveFloor(-1); const input = doc.createElement('input'); input.className = 'xb-comic-reader-floor'; input.title = '跳转故事楼层'; const jump = doc.createElement('button'); jump.textContent = '跳转'; jump.onclick = () => { const i = floors.findIndex(f => String(f.messageId) === input.value.trim()); if (i >= 0) selectFloor(i); else options.onError?.('找不到故事楼层'); }; const nextFloor = doc.createElement('button'); nextFloor.textContent = '下一故事楼层'; nextFloor.onclick = () => moveFloor(1); const draw = doc.createElement('button'); draw.textContent = '花漫画'; draw.onclick = () => options.onRegenerate?.(current()?.messageId); toolbar.append(prevFloor, input, jump, nextFloor, draw); dialog.append(toolbar);
-        doc.body.append(overlay); doc.addEventListener('keydown', onKey); render();
+        doc.body.append(overlay); readerOpen = true; doc.addEventListener('keydown', onKey); render();
     }
     return { open, close, refresh: render, move };
 }
 
 export async function openComicReader(options) { return createComicReader(options).open(); }
+
+
 
 
 
