@@ -975,17 +975,20 @@ function updateFloorDetailPopup(messageId) {
 async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
     if (!panelData || ![FloatState.IDLE, FloatState.SUCCESS, FloatState.PARTIAL, FloatState.ERROR].includes(panelData.state)) return;
-    const message = getContext()?.chat?.[messageId];
-    const saved = message?.extra?.xiaobaixDrawSaved || message?.extra?.novelDrawSaved;
-    const cached = await getPreviewsByMessageId(messageId, String(getContext()?.chatId || '')).catch(() => []);
-    const hasContent = Boolean((saved && Object.keys(saved).length > 0) || cached.some(item => item?.base64 || item?.savedUrl || item?.comic) || /xb-nd-img|manga-page|<image\\b/i.test(String(message?.mes || '')));
-    if (hasContent && !window.confirm('本楼层已有漫画，是否重新生成？重新生成将清空本楼层现有图片及描述，并按本次要求重新生成。')) return;
+    const confirmed = window.confirm('本次操作将清空本楼层现有图片及描述，并重新生成漫画。是否继续？');
+    if (!confirmed) return;
+    try {
+        await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+    } catch (error) {
+        console.error('[花漫画] 清空本楼层图片失败:', error);
+        toastr?.error?.(error.message || '清空本楼层图片失败，已停止生成');
+        return;
+    }
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
-        if (hasContent) await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
-        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: hasContent, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
+        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
     } catch (error) {
         if (error.drawTaskReported) return;
         if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
@@ -1926,6 +1929,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
