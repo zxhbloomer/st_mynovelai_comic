@@ -975,8 +975,6 @@ function updateFloorDetailPopup(messageId) {
 async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
     if (!panelData || ![FloatState.IDLE, FloatState.SUCCESS, FloatState.PARTIAL, FloatState.ERROR].includes(panelData.state)) return;
-    const confirmed = window.confirm('本次操作将清空本楼层现有图片及描述，并重新生成漫画。是否继续？');
-    if (!confirmed) return;
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
     try {
@@ -1153,8 +1151,6 @@ async function toggleQuickAutoMode() {
 }
 
 async function handleReaderRegenerate(messageId) {
-    const confirmed = window.confirm('本楼层已有漫画，是否清空后重新生成？');
-    if (!confirmed) return;
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
     await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
