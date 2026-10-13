@@ -985,7 +985,7 @@ async function handleFloorDrawClick(messageId) {
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
         if (hasContent) await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
-        await generateAndInsertImages({ messageId, ...focus, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
+        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: hasContent, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
     } catch (error) {
         if (error.drawTaskReported) return;
         if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
@@ -1926,6 +1926,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 

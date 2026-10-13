@@ -2720,7 +2720,7 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
     return tasks;
 }
 
-async function generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement = '', focusImages = [] }) {
+async function generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement = '', focusImages = [], forceRegenerate = false }) {
     const sourceText = message.mes;
     const swipeIndex = message.swipe_id ?? 0;
     const existing = [];
@@ -2732,7 +2732,7 @@ async function generateComicForMessage({ ctx, message, messageId, settings, pres
         else if (/^\s*@(?:page|position)\b/i.test(record?.tags || '')) throw new Error('图片完整描述已丢失，无法补图；请重新建立配图任务');
     }
     let tasks;
-    if (existing.length) {
+    if (existing.length && !forceRegenerate) {
         tasks = existing.filter(({ record }) => !hasPreviewImage(record)).map(({ slotId, record }) => ({
             scene: record.comic.draft?.image || record.comic.image,
             comic: { ...record.comic, ...(record.comic.draft || {}), draft: undefined },
@@ -3012,7 +3012,7 @@ async function generateAndInsertImages({
         const preset = cloneSettingsObject(getActiveParamsPreset());
 
         if (normalizeComicMode(getActivePromptPreset(settings)?.imageMode) !== 'points') {
-            return await generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement, focusImages });
+            return await generateComicForMessage({ ctx, message, messageId, settings, preset, job, onStateChange, focusRequirement, focusImages, forceRegenerate });
         }
 
         const filterRules = settings.messageFilterRules?.length
@@ -4304,5 +4304,6 @@ export {
     abortGeneration,
     isGenerating,
 };
+
 
 
