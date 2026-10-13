@@ -1763,7 +1763,7 @@ function createFloatingButton() {
         if (!messageId) {
             const ctx = getContext();
             const chatId = String(ctx?.chatId || ctx?.chat?.id || ctx?.chat?.name || 'current');
-            const saved = await ComicReaderStorage.get(chat:, null).catch(() => null);
+            const saved = await ComicReaderStorage.get('chat:' + chatId, null).catch(() => null);
             messageId = saved?.lastFloorId;
         }
         if (messageId == null) { toastr?.error?.('暂无阅读记录'); return; }
@@ -1907,6 +1907,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
