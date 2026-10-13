@@ -1141,7 +1141,7 @@ async function openComicReaderForFloor(messageId) {
     const stateStore = createReaderStateStore(ComicReaderStorage);
     const savedState = await stateStore.load(chatId).catch(() => null);
     const floors = getStoryFloors(ctx?.chat || []).map(({ messageId: id, message }) => ({ messageId: id, ...buildReaderFloor(message, 'points', savedState?.floors?.[String(id)]) }));
-    const reader = createComicReader({ messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id), onStateChange: async (state, floor, pageIndex) => {
+    const reader = createComicReader({ initialPageIndex: savedState?.floors?.[String(messageId)]?.pageIndex || 0, messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id), onStateChange: async (state, floor, pageIndex) => {
         const current = await stateStore.load(chatId).catch(() => null) || { chatId, floors: {}, lastFloorId: null };
         current.floors ||= {};
         current.floors[String(floor.messageId)] = { title: floor.chapterTitle, summary: floor.summary, pageIndex };
@@ -1907,6 +1907,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 

@@ -53,11 +53,11 @@ export function createComicReader(options = {}) {
         else pageIndex = target.pageIndex;
         render();
     }
-    const onKey = event => { if (!overlay || event.target?.matches?.('input,textarea,select,button')) return; if (event.key === 'Escape') close(); else if (event.key === 'ArrowLeft') move(-1); else if (event.key === 'ArrowRight') move(1); else if (event.key === 'PageUp') { event.preventDefault(); moveFloor(-1); } else if (event.key === 'PageDown') { event.preventDefault(); moveFloor(1); } };
+    const onKey = event => { if (!overlay || event.target?.matches?.('input,textarea,select,button') || doc.querySelector('#xb-generation-overlay')) return; if (event.key === 'Escape') close(); else if (event.key === 'ArrowLeft') move(-1); else if (event.key === 'ArrowRight') move(1); else if (event.key === 'PageUp') { event.preventDefault(); moveFloor(-1); } else if (event.key === 'PageDown') { event.preventDefault(); moveFloor(1); } };
     function close() { doc.removeEventListener('keydown', onKey); overlay?.remove(); overlay = null; options.onClose?.(); }
     async function open() {
         ensureStyle(); floors = await Promise.resolve(options.getFloors?.() || []); if (!floors.length) throw new Error('没有可阅读的故事楼层');
-        floorIndex = Math.max(0, floors.findIndex(floor => Number(floor.messageId) === Number(state.messageId))); if (floorIndex < 0) floorIndex = 0; pageIndex = 0;
+        floorIndex = Math.max(0, floors.findIndex(floor => Number(floor.messageId) === Number(state.messageId))); if (floorIndex < 0) floorIndex = 0; pageIndex = normalizeReaderIndex(options.initialPageIndex ?? 0, floors[floorIndex]?.pages?.length || 0);
         overlay = doc.createElement('div'); overlay.className = 'xb-comic-reader';
         const dialog = doc.createElement('div'); dialog.className = 'xb-comic-reader-dialog'; overlay.append(dialog);
         const head = doc.createElement('div'); head.className = 'xb-comic-reader-head'; const title = doc.createElement('div'); title.className = 'xb-comic-reader-title'; head.append(title); const closeButton = doc.createElement('button'); closeButton.className = 'xb-comic-reader-close'; closeButton.textContent = '×'; closeButton.onclick = close; head.append(closeButton); dialog.append(head);
@@ -69,4 +69,5 @@ export function createComicReader(options = {}) {
 }
 
 export async function openComicReader(options) { return createComicReader(options).open(); }
+
 
