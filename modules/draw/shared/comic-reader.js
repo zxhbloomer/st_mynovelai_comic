@@ -35,7 +35,8 @@ export function createComicReader(options = {}) {
         const prev = doc.createElement('button'); prev.className = 'xb-comic-reader-arrow'; prev.textContent = '‹'; prev.onclick = () => move(-1);
         const next = doc.createElement('button'); next.className = 'xb-comic-reader-arrow'; next.textContent = '›'; next.onclick = () => move(1);
         body.append(prev);
-        if (floor?.pages?.length) { const image = doc.createElement('img'); image.className = 'xb-comic-reader-image'; image.src = floor.pages[pageIndex]?.url || ''; image.alt = `漫画第 ${pageIndex + 1} 张`; body.append(image); }
+        if (floor?.generating) { const generating = doc.createElement('div'); generating.className = 'xb-comic-reader-empty xb-comic-reader-generating'; generating.textContent = '正在生成中，请稍候…'; body.append(generating); }
+        else if (floor?.pages?.length) { const image = doc.createElement('img'); image.className = 'xb-comic-reader-image'; image.src = floor.pages[pageIndex]?.url || ''; image.alt = `漫画第 ${pageIndex + 1} 张`; body.append(image); }
         else { const empty = doc.createElement('div'); empty.className = 'xb-comic-reader-empty'; empty.textContent = '本楼层暂无漫画'; body.append(empty); }
         body.append(next);
         const count = floor?.pages?.length || 0; meta.textContent = count ? `当前 ${pageIndex + 1} 张漫画，共 ${count} 张漫画` : '当前 0 张漫画，共 0 张漫画';
@@ -69,5 +70,6 @@ export function createComicReader(options = {}) {
 }
 
 export async function openComicReader(options) { return createComicReader(options).open(); }
+
 
 
