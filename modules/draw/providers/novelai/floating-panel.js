@@ -202,7 +202,8 @@ const STYLES = `
 }
 
 .nd-btn-draw {
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 0;
     height: 100%;
     border: none;
     background: transparent;
@@ -215,10 +216,10 @@ const STYLES = `
     transition: background 0.15s;
     font-size: 13px;
     white-space: nowrap;
+    padding: 0 12px;
 }
 .nd-btn-clear { flex: 0 0 auto; min-width: 70px; font-size: 12px; padding: 0 10px; }
-.nd-float:not(.nd-floating-global) .nd-capsule { width: 360px; }
-.nd-float:not(.nd-floating-global) .nd-btn-reader { flex: 0 0 78px; font-size: 12px; }
+.nd-float:not(.nd-floating-global) .nd-btn-reader { flex: 0 0 auto; min-width: 78px; font-size: 12px; padding: 0 10px; }
 .nd-sep { flex-shrink: 0; }
 .nd-btn-draw:hover { background: rgba(255, 255, 255, 0.12); }
 .nd-btn-draw:active { transform: scale(0.92); }
@@ -481,7 +482,8 @@ const STYLES = `
 }
 
 .nd-floating-global .nd-capsule {
-    width: 92px;
+    width: max-content;
+    min-width: 180px;
     background: var(--nd-bg-solid);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     touch-action: none;
@@ -489,8 +491,11 @@ const STYLES = `
 }
 
 .nd-floating-global .nd-btn-draw {
+    flex: 0 0 auto;
     font-size: 13px;
+    padding: 0 12px;
     white-space: nowrap;
+    padding: 0 12px;
 }
 
 .nd-floating-global .nd-capsule:active { cursor: grabbing; }
@@ -608,8 +613,7 @@ function createFloorPanelElement(messageId) {
     const isAuto = settings.mode === 'auto';
 
     const root = document.createElement('div');
-    root.className = 
-d-float${isAuto ? ' auto-on' : ''}`;
+    root.className = `nd-float${isAuto ? ' auto-on' : ''}`;
     root.dataset.messageId = messageId;
 
     const capsule = createEl('div', 'nd-capsule');
@@ -677,8 +681,7 @@ d-float${isAuto ? ' auto-on' : ''}`;
     card.append(rowPreset, innerSep, rowSize);
 
     const controls = createEl('div', 'nd-controls');
-    const autoToggle = createEl('div', 
-d-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
+    const autoToggle = createEl('div', `nd-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
     autoToggle.append(
         createEl('span', 'nd-dot'),
         createEl('span', 'nd-auto-text', '自动配图')
@@ -950,8 +953,7 @@ function updateFloorDetailPopup(messageId) {
     if (state === FloatState.SUCCESS || state === FloatState.PARTIAL) {
         if (resultEl) {
             resultEl.textContent = `${result.success}/${result.total} 成功`;
-            resultEl.className = 
-d-detail-value ${state === FloatState.SUCCESS ? 'success' : 'warning'}`;
+            resultEl.className = `nd-detail-value ${state === FloatState.SUCCESS ? 'success' : 'warning'}`;
         }
         if (errorRow) errorRow.style.display = state === FloatState.PARTIAL ? 'flex' : 'none';
         if (errorEl && state === FloatState.PARTIAL) {
@@ -1180,8 +1182,7 @@ function mountFloorPanel(messageEl, messageId) {
 
     const success = registerToToolbar(messageId, panel, {
         position: 'right',
-        id: 
-ovel-draw-${messageId}`
+        id: `novel-draw-${messageId}`
     });
 
     if (!success) return null;
@@ -1484,8 +1485,7 @@ function updateFloatingDetailPopup() {
 
     if (floatingState === FloatState.SUCCESS || floatingState === FloatState.PARTIAL) {
         detailResult.textContent = `${floatingResult.success}/${floatingResult.total} 成功`;
-        detailResult.className = 
-d-detail-value ${floatingState === FloatState.SUCCESS ? 'success' : 'warning'}`;
+        detailResult.className = `nd-detail-value ${floatingState === FloatState.SUCCESS ? 'success' : 'warning'}`;
         detailErrorRow.style.display = floatingState === FloatState.PARTIAL ? 'flex' : 'none';
         if (floatingState === FloatState.PARTIAL) {
             detailError.textContent = `${floatingResult.total - floatingResult.success} 张失败`;
@@ -1675,8 +1675,7 @@ function createFloatingButton() {
     const isAuto = settings.mode === 'auto';
 
     floatingEl = document.createElement('div');
-    floatingEl.className = 
-d-float nd-floating-global${isAuto ? ' auto-on' : ''}`;
+    floatingEl.className = `nd-float nd-floating-global${isAuto ? ' auto-on' : ''}`;
     floatingEl.id = 'nd-floating-global';
 
     const detail = createEl('div', 'nd-detail');
@@ -1717,8 +1716,7 @@ d-float nd-floating-global${isAuto ? ' auto-on' : ''}`;
     card.append(rowPreset, innerSep, rowSize);
 
     const controls = createEl('div', 'nd-controls');
-    const autoToggle = createEl('div', 
-d-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
+    const autoToggle = createEl('div', `nd-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
     autoToggle.append(
         createEl('span', 'nd-dot'),
         createEl('span', 'nd-auto-text', '自动配图')
@@ -1926,7 +1924,6 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
-
 
 
 
