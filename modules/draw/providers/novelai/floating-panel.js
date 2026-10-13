@@ -143,7 +143,8 @@ const STYLES = `
 }
 
 .nd-capsule {
-    width: max-content;`n    min-width: 260px;
+    width: max-content;
+    min-width: 260px;
     height: var(--nd-h);
     background: var(--nd-bg);
     border: 1px solid var(--nd-border);
@@ -607,7 +608,8 @@ function createFloorPanelElement(messageId) {
     const isAuto = settings.mode === 'auto';
 
     const root = document.createElement('div');
-    root.className = `nd-float${isAuto ? ' auto-on' : ''}`;
+    root.className = 
+d-float${isAuto ? ' auto-on' : ''}`;
     root.dataset.messageId = messageId;
 
     const capsule = createEl('div', 'nd-capsule');
@@ -675,7 +677,8 @@ function createFloorPanelElement(messageId) {
     card.append(rowPreset, innerSep, rowSize);
 
     const controls = createEl('div', 'nd-controls');
-    const autoToggle = createEl('div', `nd-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
+    const autoToggle = createEl('div', 
+d-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
     autoToggle.append(
         createEl('span', 'nd-dot'),
         createEl('span', 'nd-auto-text', '自动配图')
@@ -947,7 +950,8 @@ function updateFloorDetailPopup(messageId) {
     if (state === FloatState.SUCCESS || state === FloatState.PARTIAL) {
         if (resultEl) {
             resultEl.textContent = `${result.success}/${result.total} 成功`;
-            resultEl.className = `nd-detail-value ${state === FloatState.SUCCESS ? 'success' : 'warning'}`;
+            resultEl.className = 
+d-detail-value ${state === FloatState.SUCCESS ? 'success' : 'warning'}`;
         }
         if (errorRow) errorRow.style.display = state === FloatState.PARTIAL ? 'flex' : 'none';
         if (errorEl && state === FloatState.PARTIAL) {
@@ -1176,7 +1180,8 @@ function mountFloorPanel(messageEl, messageId) {
 
     const success = registerToToolbar(messageId, panel, {
         position: 'right',
-        id: `novel-draw-${messageId}`
+        id: 
+ovel-draw-${messageId}`
     });
 
     if (!success) return null;
@@ -1479,7 +1484,8 @@ function updateFloatingDetailPopup() {
 
     if (floatingState === FloatState.SUCCESS || floatingState === FloatState.PARTIAL) {
         detailResult.textContent = `${floatingResult.success}/${floatingResult.total} 成功`;
-        detailResult.className = `nd-detail-value ${floatingState === FloatState.SUCCESS ? 'success' : 'warning'}`;
+        detailResult.className = 
+d-detail-value ${floatingState === FloatState.SUCCESS ? 'success' : 'warning'}`;
         detailErrorRow.style.display = floatingState === FloatState.PARTIAL ? 'flex' : 'none';
         if (floatingState === FloatState.PARTIAL) {
             detailError.textContent = `${floatingResult.total - floatingResult.success} 张失败`;
@@ -1669,7 +1675,8 @@ function createFloatingButton() {
     const isAuto = settings.mode === 'auto';
 
     floatingEl = document.createElement('div');
-    floatingEl.className = `nd-float nd-floating-global${isAuto ? ' auto-on' : ''}`;
+    floatingEl.className = 
+d-float nd-floating-global${isAuto ? ' auto-on' : ''}`;
     floatingEl.id = 'nd-floating-global';
 
     const detail = createEl('div', 'nd-detail');
@@ -1710,7 +1717,8 @@ function createFloatingButton() {
     card.append(rowPreset, innerSep, rowSize);
 
     const controls = createEl('div', 'nd-controls');
-    const autoToggle = createEl('div', `nd-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
+    const autoToggle = createEl('div', 
+d-auto${isAuto ? ' on' : ''} nd-auto-toggle`);
     autoToggle.append(
         createEl('span', 'nd-dot'),
         createEl('span', 'nd-auto-text', '自动配图')
@@ -1918,6 +1926,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
