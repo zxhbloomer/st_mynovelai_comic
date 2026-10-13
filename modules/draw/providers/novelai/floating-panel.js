@@ -977,6 +977,8 @@ async function handleFloorDrawClick(messageId) {
     if (!panelData || ![FloatState.IDLE, FloatState.SUCCESS, FloatState.PARTIAL, FloatState.ERROR].includes(panelData.state)) return;
     const confirmed = window.confirm('本次操作将清空本楼层现有图片及描述，并重新生成漫画。是否继续？');
     if (!confirmed) return;
+    const focus = await openDrawFocusDialog({ messageId });
+    if (focus === null) return;
     try {
         await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
     } catch (error) {
@@ -984,15 +986,13 @@ async function handleFloorDrawClick(messageId) {
         toastr?.error?.(error.message || '清空本楼层图片失败，已停止生成');
         return;
     }
-    const focus = { focusRequirement: '', focusImages: [] };
-    showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
         await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => { setStateForMessage(liveId, state, data); } });
     } catch (error) {
         if (error.drawTaskReported) return;
         if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
         else { console.error(error); toastr?.error?.(error.message); }
-    } finally { hideGenerationOverlay(); }
+    }
 }
 async function handleFloorAbort(messageId) {
     const target = captureDrawCancellationTarget(messageId);
