@@ -974,11 +974,11 @@ function updateFloorDetailPopup(messageId) {
 
 async function handleFloorDrawClick(messageId) {
     const panelData = panelMap.get(messageId);
-    if (!panelData || panelData.state !== FloatState.IDLE) return;
+    if (!panelData || ![FloatState.IDLE, FloatState.SUCCESS, FloatState.PARTIAL, FloatState.ERROR].includes(panelData.state)) return;
     const message = getContext()?.chat?.[messageId];
     const saved = message?.extra?.xiaobaixDrawSaved || message?.extra?.novelDrawSaved;
     const cached = await getPreviewsByMessageId(messageId, String(getContext()?.chatId || '')).catch(() => []);
-    const hasContent = Boolean((saved && Object.keys(saved).length > 0) || cached.some(item => item?.base64 || item?.savedUrl || item?.comic));
+    const hasContent = Boolean((saved && Object.keys(saved).length > 0) || cached.some(item => item?.base64 || item?.savedUrl || item?.comic) || /xb-nd-img|manga-page|<image\\b/i.test(String(message?.mes || '')));
     if (hasContent && !window.confirm('本楼层已有漫画，是否重新生成？重新生成将清空本楼层现有图片及描述，并按本次要求重新生成。')) return;
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
@@ -1926,6 +1926,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
