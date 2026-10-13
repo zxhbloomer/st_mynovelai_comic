@@ -984,8 +984,7 @@ async function handleFloorDrawClick(messageId) {
         toastr?.error?.(error.message || '清空本楼层图片失败，已停止生成');
         return;
     }
-    const focus = await openDrawFocusDialog({ messageId });
-    if (focus === null) return;
+    const focus = { focusRequirement: '', focusImages: [] };
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
         await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => { setStateForMessage(liveId, state, data); } });
