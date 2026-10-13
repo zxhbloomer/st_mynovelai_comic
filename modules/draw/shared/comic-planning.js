@@ -3,6 +3,7 @@ import { createMangaGeneration } from './comic-generation.js';
 import { parseImageBlock } from './comic-protocol.js';
 import { hashSceneSource } from './scene-source.js';
 import { stripDrawImageSlots } from './image-marker-syntax.js';
+import { createSceneSource } from './scene-source.js';
 
 export function normalizeComicMode(mode) {
     return ['inline', 'end'].includes(mode) ? mode : 'points';
@@ -23,8 +24,9 @@ export function createComicSnapshot(source, mode) {
     return snapshot;
 }
 
-export function buildComicMessages({ source, mode, maxImages = 0, opening = '', guide = '', rules = '', worldInfo = '', focusRequirement = '', focusImages = [] }) {
-    const snapshot = createComicSnapshot(source, mode);
+export function buildComicMessages({ source, mode, maxImages = 0, opening = '', guide = '', rules = '', worldInfo = '', focusRequirement = '', focusImages = [], filterRules = [] }) {
+    const filteredSource = createSceneSource(source, { filterRules }).content;
+    const snapshot = createComicSnapshot(filteredSource, mode);
     const placement = mode === 'inline'
         ? '每页在 image 块紧前输出 <manga_position>段落编号</manga_position>，例如 <manga_position>1</manga_position>；编号在给定范围内且非递减。位置标记在 image 外。'
         : '图片全部放在文章最后，不输出 manga_position 标记。';
@@ -66,3 +68,4 @@ export function compileComicPrompt(comic, recipe = {}) {
         characterPrompts: parsed.characters.map(c => ({ prompt: c.positive, uc: c.negative, center: c.center })),
         useCoords: parsed.positionMode === 'manual' };
 }
+

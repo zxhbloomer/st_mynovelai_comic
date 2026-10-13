@@ -2707,7 +2707,7 @@ async function buildComicSourceTasks({ sourceText, settings, preset, signal, onS
     const resolvedPrompts = resolveComicPromptMacros({ opening: prompt.topSystem, guide, rules: prompt.sceneRules }, promptRuntime.substituteParams);
     appendDrawLog('②③ 规划 · 宏处理完成', { openingLength: resolvedPrompts.opening.length, guideLength: resolvedPrompts.guide.length, rulesLength: resolvedPrompts.rules.length });
     const messages = buildComicMessages({ source: sourceText, mode, maxImages: preset.maxImages || 0,
-        opening: resolvedPrompts.opening, guide: resolvedPrompts.guide, rules: resolvedPrompts.rules, worldInfo, focusRequirement, focusImages });
+        opening: resolvedPrompts.opening, guide: resolvedPrompts.guide, rules: resolvedPrompts.rules, worldInfo, focusRequirement, focusImages, filterRules: settings.messageFilterRules || [] });
     onStateChange?.('llm', { phase: 'analysis', label: '生成完整图片描述' });
     const response = await callComicText(messages, { signal });
     const tasks = createComicTasks({ source: sourceText, response, mode, maxImages: preset.maxImages || 0 });
@@ -4304,4 +4304,5 @@ export {
     abortGeneration,
     isGenerating,
 };
+
 
