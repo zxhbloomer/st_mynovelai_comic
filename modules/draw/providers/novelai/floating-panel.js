@@ -988,7 +988,7 @@ async function handleFloorDrawClick(messageId) {
     if (focus === null) return;
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
-        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => { if (isComicReaderOpen()) setStateForMessage(liveId, state, data); } });
+        await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => { setStateForMessage(liveId, state, data); } });
     } catch (error) {
         if (error.drawTaskReported) return;
         if (error instanceof FloorImageBusyError || isDrawRunPendingError(error)) toastr?.info?.(error.message);
@@ -1592,8 +1592,7 @@ async function handleFloatingDrawClick() {
 
     floatingMessageId = messageId;
 
-    const focus = await openDrawFocusDialog({ messageId });
-    if (focus === null) return;
+    const focus = { focusRequirement: '', focusImages: [] };
 
     try {
         await generateAndInsertImages({
@@ -1929,6 +1928,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
