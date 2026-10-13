@@ -21,6 +21,8 @@ export function createComicReader(options = {}) {
     let floors = [];
     let floorIndex = 0;
     let pageIndex = 0;
+    let disposeChanges = null;
+    let refreshing = false;
     const state = { chatId: options.chatId || '', messageId: options.messageId };
     const ensureStyle = () => { if (doc.getElementById('xb-comic-reader-style')) return; const style = doc.createElement('style'); style.id = 'xb-comic-reader-style'; style.textContent = styleText; doc.head?.append(style); };
     const current = () => floors[floorIndex];
@@ -57,7 +59,26 @@ export function createComicReader(options = {}) {
         render();
     }
     const onKey = event => { if (!overlay || event.target?.matches?.('input,textarea,select,button') || doc.querySelector('#xb-generation-overlay')) return; if (event.key === 'Escape') close(); else if (event.key === 'ArrowLeft') move(-1); else if (event.key === 'ArrowRight') move(1); else if (event.key === 'PageUp') { event.preventDefault(); moveFloor(-1); } else if (event.key === 'PageDown') { event.preventDefault(); moveFloor(1); } };
-    function close() { doc.removeEventListener('keydown', onKey); overlay?.remove(); overlay = null; readerOpen = false; options.onClose?.(); }
+    async function refresh() {
+        if (!overlay || refreshing) return;
+        refreshing = true;
+        try {
+            const updated = await Promise.resolve(options.getFloors?.() || []);
+            if (!overlay) return;
+            if (!updated.length) { close(); return; }
+            const changed = JSON.stringify(updated) !== JSON.stringify(floors);
+            if (!changed) return;
+            const previous = current();
+            const slotId = previous?.pages?.[pageIndex]?.slotId;
+            floors = updated;
+            floorIndex = Math.max(0, floors.findIndex(floor => Number(floor.messageId) === Number(previous?.messageId)));
+            const selectedIndex = current()?.pages?.findIndex(page => page.slotId === slotId) ?? -1;
+            pageIndex = normalizeReaderIndex(selectedIndex >= 0 ? selectedIndex : pageIndex, current()?.pages?.length || 0);
+            render();
+        } catch (error) { options.onError?.(error.message || String(error)); }
+        finally { refreshing = false; }
+    }
+    function close() { disposeChanges?.(); disposeChanges = null; doc.removeEventListener('keydown', onKey); overlay?.remove(); overlay = null; readerOpen = false; options.onClose?.(); }
     async function open() {
         ensureStyle(); floors = await Promise.resolve(options.getFloors?.() || []); if (!floors.length) throw new Error('没有可阅读的故事楼层');
         floorIndex = Math.max(0, floors.findIndex(floor => Number(floor.messageId) === Number(state.messageId))); if (floorIndex < 0) floorIndex = 0; pageIndex = normalizeReaderIndex(options.initialPageIndex ?? 0, floors[floorIndex]?.pages?.length || 0);
@@ -67,8 +88,9 @@ export function createComicReader(options = {}) {
         const body = doc.createElement('div'); body.className = 'xb-comic-reader-body'; dialog.append(body); const summary = doc.createElement('div'); summary.className = 'xb-comic-reader-summary'; dialog.append(summary); const meta = doc.createElement('div'); meta.className = 'xb-comic-reader-meta'; dialog.append(meta);
         const toolbar = doc.createElement('div'); toolbar.className = 'xb-comic-reader-toolbar'; const prevFloor = doc.createElement('button'); prevFloor.textContent = '上一故事楼层'; prevFloor.onclick = () => moveFloor(-1); const input = doc.createElement('input'); input.className = 'xb-comic-reader-floor'; input.title = '跳转故事楼层'; const jump = doc.createElement('button'); jump.textContent = '跳转'; jump.onclick = () => { const i = floors.findIndex(f => String(f.messageId) === input.value.trim()); if (i >= 0) selectFloor(i); else options.onError?.('找不到故事楼层'); }; const nextFloor = doc.createElement('button'); nextFloor.textContent = '下一故事楼层'; nextFloor.onclick = () => moveFloor(1); const draw = doc.createElement('button'); draw.textContent = '花漫画'; draw.onclick = () => options.onRegenerate?.(current()?.messageId); toolbar.append(prevFloor, input, jump, nextFloor, draw); dialog.append(toolbar);
         doc.body.append(overlay); readerOpen = true; doc.addEventListener('keydown', onKey); render();
+        disposeChanges = options.subscribeChanges?.(() => void refresh()) || null;
     }
-    return { open, close, refresh: render, move };
+    return { open, close, refresh, move };
 }
 
 export async function openComicReader(options) { return createComicReader(options).open(); }

@@ -2,7 +2,8 @@ import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
 import { createComicReader, getLastReaderPosition, isComicReaderOpen } from '../../shared/comic-reader.js';
 import { showGenerationOverlay, hideGenerationOverlay } from '../../shared/generation-overlay.js';
 import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
-import { getPreviewsByMessageId } from '../../shared/gallery-cache.js';
+import { getPreviewDisplayUrl, subscribeGalleryCacheChanges } from '../../shared/gallery-cache.js';
+import { createDrawImageSlotRegex } from '../../shared/image-marker-syntax.js';
 import { ComicReaderStorage } from '../../../../core/server-storage.js';
 import { createReaderStateStore } from '../../shared/comic-reader-storage.js';
 ﻿// floating-panel.js
@@ -22,7 +23,7 @@ import {
     abortGeneration,
 } from './novel-draw.js';
 import { registerToToolbar, removeFromToolbar } from '../../../../widgets/message-toolbar.js';
-import { formatScenePlannerProgress } from '../../shared/draw-common.js';
+import { formatScenePlannerProgress, resolveRenderPreviewForSlot } from '../../shared/draw-common.js';
 import { DRAW_CAPSULE_COPY } from '../../shared/draw-capsule-copy.js';
 import {
     resolveCurrentDrawRunActivityTarget,
@@ -105,6 +106,8 @@ let $floatingCache = {};
 // 通用状态
 let stylesInjected = false;
 let drawRunActivityDispose = null;
+let activeComicReader = null;
+let comicReaderOpenRequest = 0;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 样式 - 统一样式（楼层+悬浮共用）
@@ -1160,12 +1163,40 @@ async function handleReaderRegenerate(messageId) {
     } finally { hideGenerationOverlay(); }
 }
 async function openComicReaderForFloor(messageId) {
+    const requestId = ++comicReaderOpenRequest;
+    activeComicReader?.close();
+    activeComicReader = null;
     const ctx = getContext();
     const chatId = String(ctx?.chatId || ctx?.chat?.id || ctx?.chat?.name || 'current');
     const stateStore = createReaderStateStore(ComicReaderStorage);
     const savedState = await stateStore.load(chatId).catch(() => null);
-    const floors = await Promise.all(getStoryFloors(ctx?.chat || []).map(async ({ messageId: id, message }) => ({ messageId: id, generating: Boolean(getGenerationPhase(id)), ...buildReaderFloor(message, 'points', { ...(savedState?.floors?.[String(id)] || {}), messageId: id }, await getPreviewsByMessageId(id, chatId).catch(() => null)) })));
-    const reader = createComicReader({ initialPageIndex: savedState?.floors?.[String(messageId)]?.pageIndex || 0, messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleReaderRegenerate(id), onStateChange: async (state, floor, pageIndex) => {
+    if (requestId !== comicReaderOpenRequest) return;
+    const getFloors = async () => {
+        const live = getContext();
+        if (String(live?.chatId || live?.chat?.id || live?.chat?.name || 'current') !== chatId) return [];
+        const floors = await Promise.all(getStoryFloors(live?.chat || []).map(async ({ messageId: id, message }) => {
+            const slots = [...new Set([...String(message.mes ?? message.text ?? '').matchAll(createDrawImageSlotRegex())].map(match => match[1]))];
+            const entries = await Promise.all(slots.map(async slotId => {
+                const display = await resolveRenderPreviewForSlot(message, id, slotId).catch(() => null);
+                if (!display) return null;
+                const preview = display?.hasData ? display.preview : null;
+                return { slotId, ...(preview || {}), url: preview ? getPreviewDisplayUrl(preview) : '' };
+            }));
+            const floor = buildReaderFloor(message, 'points', { ...(savedState?.floors?.[String(id)] || {}), messageId: id }, entries.filter(Boolean));
+            return { ...floor, generating: Boolean(getGenerationPhase(id)) };
+        }));
+        const current = getContext();
+        return String(current?.chatId || current?.chat?.id || current?.chat?.name || 'current') === chatId ? floors : [];
+    };
+    const reader = createComicReader({ initialPageIndex: savedState?.floors?.[String(messageId)]?.pageIndex || 0, messageId, chatId, getFloors,
+        subscribeChanges: refresh => {
+            const unsubscribe = subscribeGalleryCacheChanges(refresh);
+            // Also observe same-tab chat writebacks, slot removal and generation completion.
+            const timer = setInterval(refresh, 1000);
+            return () => { clearInterval(timer); unsubscribe(); };
+        },
+        onClose: () => { if (activeComicReader === reader) activeComicReader = null; },
+        onError: message => toastr?.error?.(message), onRegenerate: id => handleReaderRegenerate(id), onStateChange: async (state, floor, pageIndex) => {
         const current = await stateStore.load(chatId).catch(() => null) || { chatId, floors: {}, lastFloorId: null };
         current.floors ||= {};
         current.floors[String(floor.messageId)] = { title: floor.chapterTitle, summary: floor.summary, pageIndex };
@@ -1173,6 +1204,8 @@ async function openComicReaderForFloor(messageId) {
         await stateStore.save(chatId, current).catch(error => console.warn('[花漫画] 阅读进度保存失败', error));
     } });
     await reader.open();
+    if (requestId !== comicReaderOpenRequest) { reader.close(); return; }
+    activeComicReader = reader;
 }
 function mountFloorPanel(messageEl, messageId) {
     if (panelMap.has(messageId)) {
@@ -1903,6 +1936,8 @@ export function initFloatingPanel() {
 }
 
 export function destroyFloatingPanel() {
+    comicReaderOpenRequest++;
+    activeComicReader?.close();
     drawRunActivityDispose?.();
     drawRunActivityDispose = null;
     panelMap.forEach((data, messageId) => {

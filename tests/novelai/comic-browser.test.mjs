@@ -12,12 +12,13 @@ const prefix = '/scripts/extensions/third-party/st_mynovelai_comic/';
 const image = '@page\ncomic\n\n@panel P1\nroom\n@character C1\nboy\n@negative\nglasses\n@non_character\nnarration\nText: 你好，世界！';
 const base64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQ1sAAAAASUVORK5CYII=';
 const host = {
- '/script.js': 'export const messageFormatting=text=>text;',
+ '/script.js': 'export const messageFormatting=text=>text; export const getRequestHeaders=()=>({}); export const syncMesToSwipe=async()=>{};',
  '/scripts/extensions.js': 'export const getContext=()=>window.ctx;',
- '/scripts/utils.js': 'export const saveBase64AsFile=async()=>"/saved.png"; export const uuidv4=()=>crypto.randomUUID();',
+ '/scripts/utils.js': 'export const saveBase64AsFile=async()=>"/saved.png"; export const uuidv4=()=>crypto.randomUUID(); export const debounce=fn=>fn;',
+ [prefix+'widgets/message-toolbar.js']: 'export function registerToToolbar(id,element){document.body.append(element);return true;} export function removeFromToolbar(id,element){element.remove();}',
  [prefix+'core/event-manager.js']: 'export const event_types={};export const createModuleEvents=()=>({on(){},off(){},emit(){}});',
  [prefix+'modules/shared/common/generate-interceptor.js']: 'export const GENERATE_INTERCEPTOR_ORDER={};export function registerGenerateInterceptor(){} export function unregisterGenerateInterceptor(){}',
- [prefix+'modules/draw/shared/draw-agent.js']: 'export const resolveDrawAgentContext=async()=>({providerConfig:{maxTokens:4000},agentCore:{createAgentAdapter:()=>({chat:async task=>{window.llmTask=task;return {text:window.llmResponse};}})}});',
+ [prefix+'modules/draw/shared/draw-agent.js']: 'export const resolveDrawAgentContext=async()=>({providerConfig:{maxTokens:4000},agentCore:{createAgentAdapter:()=>({chat:async task=>{window.llmTask=task;return {text:window.llmResponse};}})}}); export const beginDrawScenePlannerDiagnostic=()=>({update(){}}); export const callDrawScenePlannerAgent=async()=>({}); export const resolveDrawAgentProviderConfig=async()=>({}); export const getLastDrawAgentDiagnostic=()=>null;',
 };
 async function harness() {
  const server=http.createServer((req,res)=>{
@@ -38,6 +39,109 @@ async function harness() {
  return {page,errors,close:async()=>{await browser.close();await new Promise(resolve=>server.close(resolve));}};
 }
 
+test('reader shares current-slot rendering, mixed floor keys, portable fallback and live refresh', async () => {
+ const h = await harness();
+ try {
+  const result = await h.page.evaluate(async ({prefix, base64}) => {
+   window.ctx = {chatId:'reader-chat', chat:[], saveChat:async()=>{}};
+   const gallery = await import(prefix+'modules/draw/shared/gallery-cache.js');
+   const common = await import(prefix+'modules/draw/shared/draw-common.js');
+   const model = await import(prefix+'modules/draw/shared/comic-reader-model.js');
+   const {createComicReader} = await import(prefix+'modules/draw/shared/comic-reader.js');
+   await gallery.storePreview({imgId:'numeric',slotId:'reader-1',base64,chatId:'reader-chat',messageId:7});
+   await gallery.storePreview({imgId:'string',slotId:'reader-2',base64,chatId:'reader-chat',messageId:'7'});
+   await gallery.storePreview({imgId:'other-chat',slotId:'other',base64,chatId:'other-chat',messageId:7});
+   const ids = (await gallery.getPreviewsByMessageId('7','reader-chat')).map(p=>p.imgId).sort();
+   const checks = [];
+   for (const mode of ['points','inline','end']) {
+    const message = {mes:'正文[image:reader-2][image:reader-1]',extra:{novelDrawSaved:{'reader-2':{imgId:'portable',savedUrl:'/portable.png',comic:{mode}}}}};
+    window.ctx.chat[7] = message;
+    await gallery.storePreview({imgId:'redraw-'+mode,slotId:'reader-1',base64,chatId:'reader-chat',messageId:7,comic:{mode}});
+    await gallery.setSlotSelection('reader-1','numeric');
+    const entries = await Promise.all(['reader-2','reader-1'].map(async slotId=>{
+     const display = await common.resolveRenderPreviewForSlot(message,7,slotId);
+     return {slotId,...display.preview,url:gallery.getPreviewDisplayUrl(display.preview)};
+    }));
+    const floor = model.buildReaderFloor(message,mode,{messageId:7},entries);
+    checks.push({slots:floor.pages.map(p=>p.slotId),ids:floor.pages.map(p=>p.imgId),urls:floor.pages.map(p=>p.url)});
+   }
+   await gallery.storeFailedPlaceholder({imgId:'reader-failed',slotId:'reader-2',chatId:'reader-chat',messageId:7});
+   await gallery.setSlotSelection('reader-2','reader-failed');
+   const failure = await common.resolveRenderPreviewForSlot(window.ctx.chat[7],7,'reader-2');
+   let floors = [{messageId:7,pages:[{slotId:'a',url:'/a.png'},{slotId:'b',url:'/b.png'}]}];
+   let notify, disposed = false;
+   const reader = createComicReader({messageId:7,getFloors:()=>floors,subscribeChanges:fn=>{notify=fn;return()=>{disposed=true;};}});
+   await reader.open(); reader.move(1);
+   floors = [{messageId:7,pages:[{slotId:'a',url:'/a.png'},{slotId:'b',url:'/redrawn.png'},{slotId:'c',url:'/c.png'}]}];
+   await reader.refresh();
+   const redrawn = document.querySelector('.xb-comic-reader-image').getAttribute('src');
+   floors = [{messageId:7,pages:[]}]; notify();
+   await new Promise(resolve=>setTimeout(resolve,0));
+   const empty = document.querySelector('.xb-comic-reader-empty')?.textContent;
+   floors = [{messageId:7,pages:[{slotId:'a',url:'/generated.png'}]}]; await reader.refresh();
+   const generated = document.querySelector('.xb-comic-reader-image').getAttribute('src');
+   floors = []; await reader.refresh();
+   return {ids,checks,redrawn,empty,generated,disposed,failed:failure.isFailed,closed:!document.querySelector('.xb-comic-reader')};
+  },{prefix,base64});
+  assert.deepEqual(result.ids,['numeric','string']);
+  for (const check of result.checks) {
+   assert.deepEqual(check.slots,['reader-2','reader-1']);
+   assert.deepEqual(check.ids,['portable','numeric']);
+   assert.equal(check.urls[0],'/portable.png');
+   assert.match(check.urls[1],/^(blob:|data:image\/)/);
+  }
+  assert.equal(result.redrawn,'/redrawn.png');
+  assert.equal(result.empty,'本楼层暂无漫画');
+  assert.equal(result.generated,'/generated.png');
+  assert.equal(result.disposed,true); assert.equal(result.closed,true);
+  assert.equal(result.failed,true);
+  assert.deepEqual(h.errors,[]);
+ } finally { await h.close(); }
+});
+
+test('overlapping reader clicks keep one window and dispose the superseded refresh timer', async () => {
+ const h = await harness();
+ try {
+  const result = await h.page.evaluate(async ({prefix,base64}) => {
+   window.ctx = {chatId:'reader-race',chat:Array(131),saveChat:async()=>{}};
+   window.ctx.chat[130] = {mes:'正文[image:reader-race-slot]'};
+   const gallery = await import(prefix+'modules/draw/shared/gallery-cache.js');
+   await gallery.storePreview({imgId:'reader-race-image',slotId:'reader-race-slot',base64,chatId:'reader-race',messageId:130});
+   const {ComicReaderStorage} = await import(prefix+'core/server-storage.js');
+   const storageReads = [];
+   let delayedReadCount = 0;
+   ComicReaderStorage.get = () => {
+    if (delayedReadCount++ >= 2) return Promise.resolve(null);
+    return new Promise(resolve => storageReads.push(resolve));
+   };
+   const floatingPanel = await import(prefix+'modules/draw/providers/novelai/floating-panel.js');
+   const message = document.createElement('div');
+   document.body.append(message);
+   floatingPanel.ensureNovelDrawPanel(message,130,{force:true});
+   const activeIntervals = new Set();
+   const nativeSetInterval = window.setInterval.bind(window);
+   const nativeClearInterval = window.clearInterval.bind(window);
+   window.setInterval = (callback,delay,...args) => { const id = nativeSetInterval(callback,delay,...args); activeIntervals.add(id); return id; };
+   window.clearInterval = id => { activeIntervals.delete(id); return nativeClearInterval(id); };
+   const button = document.querySelector('.nd-btn-reader');
+   button.click();
+   button.click();
+   for (let i=0; i<50 && storageReads.length<2; i++) await new Promise(resolve=>setTimeout(resolve,0));
+   storageReads.forEach(resolve=>resolve(null));
+   await new Promise(resolve=>setTimeout(resolve,100));
+   const openCount = document.querySelectorAll('.xb-comic-reader').length;
+   const intervalCount = activeIntervals.size;
+   floatingPanel.destroyFloatingPanel();
+   return {readCount:storageReads.length,openCount,intervalCount,remainingReaders:document.querySelectorAll('.xb-comic-reader').length,remainingIntervals:activeIntervals.size};
+  },{prefix,base64});
+  assert.equal(result.readCount,2);
+  assert.equal(result.openCount,1);
+  assert.equal(result.intervalCount,1);
+  assert.equal(result.remainingReaders,0);
+  assert.equal(result.remainingIntervals,0);
+  assert.deepEqual(h.errors,[]);
+ } finally { await h.close(); }
+});
 test('real IndexedDB, history editor, AI draft and reload preserve per-version protocol',async()=>{
  const h=await harness();const {page}=h;
  try {

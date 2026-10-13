@@ -725,9 +725,19 @@ export async function getPreviewsByMessageId(messageId, chatId = '') {
     const database = await openDB();
     return new Promise((resolve, reject) => {
         const tx = database.transaction(DB_STORE, 'readonly');
-        const request = tx.objectStore(DB_STORE).index('messageId').getAll(String(messageId));
-        request.onsuccess = () => resolve((request.result || []).filter(item => !chatId || String(item.chatId) === String(chatId)).sort((a, b) => String(a.slotId).localeCompare(String(b.slotId), undefined, { numeric: true })));
-        request.onerror = () => reject(request.error);
+        const index = tx.objectStore(DB_STORE).index('messageId');
+        const keys = [String(messageId)];
+        if (Number.isFinite(Number(messageId))) keys.push(Number(messageId));
+        const results = [];
+        let pending = keys.length;
+        for (const key of keys) {
+            const request = index.getAll(key);
+            request.onsuccess = () => {
+                results.push(...(request.result || []));
+                if (--pending === 0) resolve(results.filter(item => !chatId || String(item.chatId) === String(chatId)).sort((a, b) => String(a.slotId).localeCompare(String(b.slotId), undefined, { numeric: true })));
+            };
+            request.onerror = () => reject(request.error);
+        }
     });
 }
 

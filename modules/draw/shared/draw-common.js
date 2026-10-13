@@ -544,7 +544,7 @@ export function insertPreviewIntoRenderedMessage({ messageId, slotId, html }) {
     return mesTextEl.querySelector(buildDrawSlotSelector(slotId)) !== null;
 }
 
-async function resolveRenderPreviewForSlot(message, messageId, slotId) {
+export async function resolveRenderPreviewForSlot(message, messageId, slotId) {
     const display = await getDisplayPreviewForSlot(slotId);
     const savedEntry = getDrawSavedEntry(message, slotId);
     // The gallery selection is the explicit choice, also after a detached
