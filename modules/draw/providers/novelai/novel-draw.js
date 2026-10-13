@@ -2646,6 +2646,7 @@ async function buildNovelScenePlannerOptions({
     onStateChange,
     focusRequirement = '',
     focusImages = [],
+    forceRegenerate = false,
 }) {
     let worldbookEntries = null;
     const customPrompts = getActivePromptPreset(settings) || DEFAULT_PROMPT_CONFIG;
@@ -2995,6 +2996,7 @@ async function generateAndInsertImages({
     automatic = false,
     focusRequirement = '',
     focusImages = [],
+    forceRegenerate = false,
 }) {
 
     const job = createGenerationJob(messageId);
@@ -4304,6 +4306,7 @@ export {
     abortGeneration,
     isGenerating,
 };
+
 
 
 
