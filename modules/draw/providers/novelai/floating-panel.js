@@ -2,6 +2,8 @@ import { openDrawFocusDialog } from '../../shared/draw-focus-dialog.js';
 import { createComicReader, getLastReaderPosition } from '../../shared/comic-reader.js';
 import { showGenerationOverlay, hideGenerationOverlay } from '../../shared/generation-overlay.js';
 import { getStoryFloors, buildReaderFloor } from '../../shared/comic-reader-model.js';
+import { ComicReaderStorage } from '../../../../core/server-storage.js';
+import { createReaderStateStore } from '../../shared/comic-reader-storage.js';
 ﻿// floating-panel.js
 /**
  * NovelDraw 画图按钮面板 - 支持楼层按钮和悬浮按钮双模式
@@ -1135,11 +1137,19 @@ async function toggleQuickAutoMode() {
 
 async function openComicReaderForFloor(messageId) {
     const ctx = getContext();
-    const floors = getStoryFloors(ctx?.chat || []).map(({ messageId: id, message }) => ({ messageId: id, ...buildReaderFloor(message, 'points', { messageId: id }) }));
-    const reader = createComicReader({ messageId, chatId: ctx?.chatId || '', getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id) });
+    const chatId = String(ctx?.chatId || ctx?.chat?.id || ctx?.chat?.name || 'current');
+    const stateStore = createReaderStateStore(ComicReaderStorage);
+    const savedState = await stateStore.load(chatId).catch(() => null);
+    const floors = getStoryFloors(ctx?.chat || []).map(({ messageId: id, message }) => ({ messageId: id, ...buildReaderFloor(message, 'points', savedState?.floors?.[String(id)]) }));
+    const reader = createComicReader({ messageId, chatId, getFloors: () => floors, onError: message => toastr?.error?.(message), onRegenerate: id => handleFloorDrawClick(id), onStateChange: async (state, floor, pageIndex) => {
+        const current = await stateStore.load(chatId).catch(() => null) || { chatId, floors: {}, lastFloorId: null };
+        current.floors ||= {};
+        current.floors[String(floor.messageId)] = { title: floor.chapterTitle, summary: floor.summary, pageIndex };
+        current.lastFloorId = String(floor.messageId);
+        await stateStore.save(chatId, current).catch(error => console.warn('[花漫画] 阅读进度保存失败', error));
+    } });
     await reader.open();
 }
-
 function mountFloorPanel(messageEl, messageId) {
     if (panelMap.has(messageId)) {
         const existing = panelMap.get(messageId);
@@ -1890,6 +1900,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
