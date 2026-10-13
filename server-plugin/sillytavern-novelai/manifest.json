@@ -1,10 +1,11 @@
 {
     "id": "sillytavern-novelai",
     "name": "花漫画 NovelAI",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "author": "花漫画",
     "description": "Standalone NovelAI transport, V5 streaming, and image jobs for SillyTavern."
 }
+
 
 
 

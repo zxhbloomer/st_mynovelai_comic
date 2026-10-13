@@ -215,7 +215,7 @@ const STYLES = `
     font-size: 13px;
     white-space: nowrap;
 }
-.nd-btn-clear { flex: 0 0 70px; font-size: 12px; }
+.nd-btn-clear { flex: 0 0 70px; font-size: 12px; }`n.nd-float:not(.nd-floating-global) .nd-capsule { width: 360px; }`n.nd-float:not(.nd-floating-global) .nd-btn-reader { flex: 0 0 78px; font-size: 12px; }
 .nd-sep { flex-shrink: 0; }
 .nd-btn-draw:hover { background: rgba(255, 255, 255, 0.12); }
 .nd-btn-draw:active { transform: scale(0.92); }
@@ -1916,6 +1916,7 @@ export {
     destroyFloatingButton,
     setFloatingState,
 };
+
 
 
 
