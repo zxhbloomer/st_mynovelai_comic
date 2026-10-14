@@ -4159,6 +4159,9 @@ export async function initNovelDraw() {
     });
 
 
+    // 历史消息加载后补挂楼层按钮，已有面板由挂载逻辑去重。
+    events.on(event_types.MORE_MESSAGES_LOADED, renderExistingPanels);
+
     // 聊天切换时重新创建面板
     events.on(event_types.CHAT_CHANGED, () => {
         floatingPanel.refreshDrawRunUiState?.();
