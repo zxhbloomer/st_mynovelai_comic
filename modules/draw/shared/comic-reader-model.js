@@ -35,8 +35,15 @@ export function buildReaderFloor(message, mode = 'points', savedState = null, pr
     }));
     const text = String(message?.mes ?? message?.text ?? '');
     const tagValue = name => text.match(new RegExp('<' + name + '\\b[^>]*>([\\s\\S]*?)</' + name + '>', 'i'))?.[1]?.trim() || '';
-    const title = String(savedState?.title || message?.extra?.xiaobaixComicTitle || tagValue('chapter_title')).trim() || '暂无标题';
-    const summary = String(savedState?.summary || message?.extra?.xiaobaixComicSummary || tagValue('chapter_summary')).trim() || '暂无简介';
+    const chapter = order.map(slotId => bySlot.get(slotId)).map(entry => entry?.chapter || entry?.comic?.chapter).find(Boolean);
+    const realValue = (value, placeholder) => {
+        const text = typeof value === 'string' ? value.trim() : '';
+        return text === placeholder ? '' : text;
+    };
+    const title = (chapter ? realValue(chapter.title, '暂无标题')
+        : realValue(message?.extra?.xiaobaixComicTitle, '暂无标题') || tagValue('chapter_title') || realValue(savedState?.title, '暂无标题')) || '暂无标题';
+    const summary = (chapter ? realValue(chapter.summary, '暂无简介')
+        : realValue(message?.extra?.xiaobaixComicSummary, '暂无简介') || tagValue('chapter_summary') || realValue(savedState?.summary, '暂无简介')) || '暂无简介';
     return { messageId: savedState?.messageId ?? null, chapterTitle: title, summary, pages, hasComic: pages.length > 0 };
 }
 export function getAdjacentStoryFloor(floors, messageId, direction) {

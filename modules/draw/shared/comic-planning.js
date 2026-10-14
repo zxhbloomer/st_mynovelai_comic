@@ -42,6 +42,8 @@ export function createComicTasks({ source, response, mode, maxImages = 0 }) {
     if (maxImages > 0 && plan.pages.length > maxImages) throw new Error('返回图片数量超过当前上限');
     const planning = [...response.matchAll(/<comic_plan\b[^>]*>([\s\S]*?)<\/comic_plan>/gi)].map(m => m[1].trim());
     const thinking = [...response.matchAll(/<thinking\b[^>]*>([\s\S]*?)<\/thinking>/gi)].map(m => m[1].trim()).join('\n\n');
+    const chapter = { title: response.match(/<chapter_title\b[^>]*>([\s\S]*?)<\/chapter_title>/i)?.[1]?.trim() || '',
+        summary: response.match(/<chapter_summary\b[^>]*>([\s\S]*?)<\/chapter_summary>/i)?.[1]?.trim() || '' };
     const pages = plan.pages.map(page => ({ page: page.page, image: page.image.slice(7, -8).trim(),
         planning: planning.length === plan.pages.length ? planning[page.page - 1] : '' }));
     const placementSource = stripDrawImageSlots(source);
@@ -53,6 +55,7 @@ export function createComicTasks({ source, response, mode, maxImages = 0 }) {
         if (!parsed?.ok || parsed.wireFormat !== 'sections') throw new Error(parsed?.reason || '图片必须使用完整分段文本协议');
         return { scene: pages[index].image, comic: { version: 1, mode, page: page.page,
             image: pages[index].image, planning: pages[index].planning,
+            ...(chapter.title || chapter.summary ? { chapter } : {}),
             sourceText: snapshot.body, roundPlanning: planning.join('\n\n'), thinking, pages,
             afterParagraph: page.afterParagraph },
             placement: { mode: 'source', sourceHash, offset: mode === 'inline'

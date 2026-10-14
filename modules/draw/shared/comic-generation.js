@@ -41,7 +41,7 @@ export function createMangaGeneration() {
     function validateComicPlan(text, contract) {
         if (typeof text !== 'string') throw new Error('LLM 未返回文本');
         const hadPlanning = /<(?:thinking|think|comic_plan)\b/i.test(text);
-        let source = text.trim().replace(/<(thinking|think|comic_plan)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+        let source = text.trim().replace(/<(chapter_title|chapter_summary)\b[^>]*>[\s\S]*?<\/\1>/gi, '').replace(/<(thinking|think|comic_plan)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
         if (/<\/?(?:thinking|think|comic_plan)\b/i.test(source)) throw new Error('LLM 返回的规划标签未闭合，未开始绘图');
         const pages = [];
         let cursor = 0;

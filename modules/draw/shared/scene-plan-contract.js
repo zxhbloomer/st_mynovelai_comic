@@ -424,6 +424,8 @@ export function parseSubmittedScenePlan(result = {}, options = {}) {
     });
     // Planning notes are model-facing data, not part of the image execution contract.
     if (!Object.hasOwn(parameters, 'images')) failSchema('parameters.images', '是必填字段', undefined);
-    const tasks = normalizeImages(parameters.images, options);
+    const chapter = { title: typeof parameters.chapter_title === 'string' ? parameters.chapter_title.trim() : '',
+        summary: typeof parameters.chapter_summary === 'string' ? parameters.chapter_summary.trim() : '' };
+    const tasks = normalizeImages(parameters.images, options).map(task => ({ ...task, ...(chapter.title || chapter.summary ? { chapter } : {}) }));
     return { tasks, ...(argumentRepair ? { argumentRepair } : {}) };
 }

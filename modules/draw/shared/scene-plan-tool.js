@@ -133,6 +133,8 @@ export function createSubmitScenePlanTool(options = {}) {
                 required: ['images'],
                 properties: {
                     images: imagesSchema,
+                    chapter_title: { type: 'string' },
+                    chapter_summary: { type: 'string' },
                 },
             },
         },

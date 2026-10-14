@@ -981,7 +981,7 @@ async function handleFloorDrawClick(messageId) {
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
     try {
-        await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+        await clearComicFloor(messageId);
     } catch (error) {
         console.error('[花漫画] 清空本楼层图片失败:', error);
         toastr?.error?.(error.message || '清空本楼层图片失败，已停止生成');
@@ -1030,7 +1030,7 @@ function bindFloorPanelEvents(panelData) {
             if (getGenerationPhase(messageId) || pending.pending) {
                 throw new Error('本楼层仍在生成图片，请先中止或等待完成后再清空');
             }
-            const count = await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+            const count = await clearComicFloor(messageId);
             el.classList.remove('expanded');
             toastr?.success?.(count ? `已清空本楼层 ${count} 个图片位置` : '本楼层没有花漫画图片');
         } catch (error) {
@@ -1156,11 +1156,28 @@ async function toggleQuickAutoMode() {
 async function handleReaderRegenerate(messageId) {
     const focus = await openDrawFocusDialog({ messageId });
     if (focus === null) return;
-    await clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
+    await clearComicFloor(messageId);
     showGenerationOverlay('正在生成中，请勿关闭页面');
     try {
         await generateAndInsertImages({ messageId, ...focus, forceRegenerate: true, onStateChange: (state, data, liveId) => setStateForMessage(liveId, state, data) });
     } finally { hideGenerationOverlay(); }
+}
+async function clearComicFloor(messageId) {
+    const ctx = getContext();
+    const chatId = String(ctx.chatId);
+    const message = ctx.chat?.[messageId];
+    const swipeIndex = message?.swipe_id ?? 0;
+    const stateStore = createReaderStateStore(ComicReaderStorage);
+    const state = await stateStore.load(chatId);
+    if (String(getContext().chatId) !== chatId || getContext().chat?.[messageId] !== message
+        || (message?.swipe_id ?? 0) !== swipeIndex) throw new Error('聊天或楼层版本已变化，已停止清理');
+    if (state?.floors) {
+        delete state.floors[String(messageId)];
+        await stateStore.save(chatId, state);
+    }
+    if (String(getContext().chatId) !== chatId || getContext().chat?.[messageId] !== message
+        || (message?.swipe_id ?? 0) !== swipeIndex) throw new Error('聊天或楼层版本已变化，已停止清理');
+    return clearFloorImageSlots({ messageId, getContext, removeSlot: removeChatImageSlot });
 }
 async function openComicReaderForFloor(messageId) {
     const requestId = ++comicReaderOpenRequest;
@@ -1172,6 +1189,7 @@ async function openComicReaderForFloor(messageId) {
     const savedState = await stateStore.load(chatId).catch(() => null);
     if (requestId !== comicReaderOpenRequest) return;
     const getFloors = async () => {
+        const currentState = await stateStore.load(chatId).catch(() => null);
         const live = getContext();
         if (String(live?.chatId || live?.chat?.id || live?.chat?.name || 'current') !== chatId) return [];
         const floors = await Promise.all(getStoryFloors(live?.chat || []).map(async ({ messageId: id, message }) => {
@@ -1182,7 +1200,7 @@ async function openComicReaderForFloor(messageId) {
                 const preview = display?.hasData ? display.preview : null;
                 return { slotId, ...(preview || {}), url: preview ? getPreviewDisplayUrl(preview) : '' };
             }));
-            const floor = buildReaderFloor(message, 'points', { ...(savedState?.floors?.[String(id)] || {}), messageId: id }, entries.filter(Boolean));
+            const floor = buildReaderFloor(message, 'points', { ...(currentState?.floors?.[String(id)] || {}), messageId: id }, entries.filter(Boolean));
             return { ...floor, generating: Boolean(getGenerationPhase(id)) };
         }));
         const current = getContext();
@@ -1199,7 +1217,8 @@ async function openComicReaderForFloor(messageId) {
         onError: message => toastr?.error?.(message), onRegenerate: id => handleReaderRegenerate(id), onStateChange: async (state, floor, pageIndex) => {
         const current = await stateStore.load(chatId).catch(() => null) || { chatId, floors: {}, lastFloorId: null };
         current.floors ||= {};
-        current.floors[String(floor.messageId)] = { title: floor.chapterTitle, summary: floor.summary, pageIndex };
+        current.floors[String(floor.messageId)] = { title: floor.chapterTitle === '暂无标题' ? '' : floor.chapterTitle,
+            summary: floor.summary === '暂无简介' ? '' : floor.summary, pageIndex };
         current.lastFloorId = String(floor.messageId);
         await stateStore.save(chatId, current).catch(error => console.warn('[花漫画] 阅读进度保存失败', error));
     } });

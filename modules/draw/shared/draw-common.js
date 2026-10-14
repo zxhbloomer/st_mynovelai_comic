@@ -436,6 +436,7 @@ function normalizeDrawSavedEntry(slotId, data = {}) {
         slotId,
         collapseImages: data.collapseImages === true,
         ...(data.comic ? { comic: data.comic } : {}),
+        ...(data?.chapter ? { chapter: data.chapter } : {}),
         imgId: data.imgId || '',
         savedUrl: data.savedUrl,
         tags: data.tags || '',
@@ -476,7 +477,8 @@ export async function setDrawSavedEntry(messageId, slotId, data) {
         previous.tags === entry.tags &&
         previous.positive === entry.positive &&
         previous.collapseImages === entry.collapseImages &&
-        JSON.stringify(previous.comic) === JSON.stringify(entry.comic);
+        JSON.stringify(previous.comic) === JSON.stringify(entry.comic) &&
+        JSON.stringify(previous.chapter) === JSON.stringify(entry.chapter);
     const legacyMap = getSavedMap(message, LEGACY_NOVEL_SAVED_EXTRA_KEY);
     const hasLegacyEntry = !!legacyMap?.[slotId];
     if (unchanged && !hasLegacyEntry) return true;
@@ -522,6 +524,7 @@ export async function syncDrawSavedFromPreview(messageId, preview, overrides = {
         positive: overrides.positive ?? preview?.positive ?? '',
         collapseImages: preview?.collapseImages === true,
         ...(preview?.comic ? { comic: preview.comic } : {}),
+        ...(preview?.chapter ? { chapter: preview.chapter } : {}),
     });
 }
 
@@ -561,6 +564,7 @@ export async function resolveRenderPreviewForSlot(message, messageId, slotId) {
                 ...matchedPreview,
                 collapseImages: savedEntry.collapseImages === true,
                 ...(savedEntry.comic ? { comic: savedEntry.comic } : {}),
+                ...(savedEntry?.chapter ? { chapter: savedEntry.chapter } : {}),
                 slotId,
                 imgId: savedEntry.imgId || matchedPreview?.imgId || `saved-${slotId}`,
                 savedUrl: savedEntry.savedUrl,

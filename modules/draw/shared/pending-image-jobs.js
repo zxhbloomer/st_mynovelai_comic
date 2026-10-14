@@ -169,6 +169,7 @@ function normalizeItem(source) {
         previewMetadata: {
             collapseImages: metadata.collapseImages === true,
             ...(metadata.comic ? { comic: JSON.parse(JSON.stringify(metadata.comic)) } : {}),
+            ...(metadata?.chapter ? { chapter: metadata.chapter } : {}),
             tags: normalizeText(metadata.tags),
             positive: normalizeText(metadata.positive),
             characterPrompts: metadata.characterPrompts ?? null,

@@ -73,7 +73,7 @@ async function redraw(provider, container) {
             generationSnapshot: record?.generationSnapshot,
             plannerSourceText: record?.plannerSourceText,
             plannerSourceOrigin: record?.plannerSourceOrigin,
-            tasks: [{ scene: tags, characterPrompts: record?.characterPrompts ?? [],
+            tasks: [{ scene: tags, ...(record?.chapter ? { chapter: record.chapter } : {}), characterPrompts: record?.characterPrompts ?? [],
                 negativePrompt: record?.negativePrompt ?? undefined,
                 placement: { mode: 'existing', slotId } }] });
     } finally {
