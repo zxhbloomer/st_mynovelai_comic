@@ -382,6 +382,7 @@ const novelImageRequestQueue = createSerialImageRequestQueue({
 });
 const imageBackendJobsClient = createImageBackendJobsClient({ getHeaders: getRequestHeaders });
 let ensureNovelDrawPanelRef = null;
+let floorMessageObserver = null;
 let overlayResizeHandler = null;
 let afterAiGateDispose = null;
 let agentSettingsSurface = null;
@@ -4125,6 +4126,29 @@ export async function initNovelDraw() {
     // 事件监听
     // ════════════════════════════════════════════════════════════════════
 
+    // 跳转插件直接重建消息节点时不会发出酒馆消息渲染事件。
+    floorMessageObserver?.disconnect();
+    const chatElement = document.getElementById('chat');
+    if (chatElement) {
+        floorMessageObserver = new MutationObserver(records => {
+            const addedMessages = new Set();
+            for (const record of records) for (const node of record.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                if (node.matches('.mes[mesid]')) addedMessages.add(node);
+                for (const messageEl of node.querySelectorAll('.mes[mesid]')) addedMessages.add(messageEl);
+            }
+            const chat = getContext().chat || [];
+            for (const messageEl of addedMessages) {
+                if (!messageEl.isConnected || !chatElement.contains(messageEl)) continue;
+                const messageId = Number(messageEl.getAttribute('mesid'));
+                const message = chat[messageId];
+                if (!Number.isInteger(messageId) || !message || message.is_user) continue;
+                ensureNovelDrawPanelRef?.(messageEl, messageId);
+            }
+        });
+        floorMessageObserver.observe(chatElement, { childList: true, subtree: true });
+    }
+
     // AI 消息渲染时创建画图按钮
     events.on(event_types.CHARACTER_MESSAGE_RENDERED, (data) => {
         const messageId = typeof data === 'number' ? data : data?.messageId ?? data?.mesId;
@@ -4232,6 +4256,8 @@ export async function initNovelDraw() {
 }
 
 export async function cleanupNovelDraw() {
+    floorMessageObserver?.disconnect();
+    floorMessageObserver = null;
     preparedImageDispose?.();
     preparedImageDispose = null;
     const cleanupGeneration = ++moduleLifecycleGeneration;
