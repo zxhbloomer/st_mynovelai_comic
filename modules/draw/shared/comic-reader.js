@@ -13,8 +13,8 @@ export const getReaderPageTarget = ({ pageIndex, pageCount, floorIndex, floorCou
 };
 
 const styleText = `
-.xb-comic-reader{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
-.xb-comic-reader-dialog{width:min(100%,1180px);height:min(94dvh,920px);background:var(--SmartThemeBlurTintColor,#202020);color:var(--SmartThemeBodyColor,#eee);display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.16);border-radius:16px;overflow:hidden;box-shadow:0 24px 80px #000b}
+.xb-comic-reader{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:0;box-sizing:border-box}
+.xb-comic-reader-dialog{width:100%;height:100%;background:var(--SmartThemeBlurTintColor,#202020);color:var(--SmartThemeBodyColor,#eee);display:flex;flex-direction:column;border:0;border-radius:0;overflow:hidden;box-shadow:none}
 .xb-comic-reader-head{position:relative;text-align:center;padding:14px 56px;border-bottom:1px solid rgba(255,255,255,.12);flex-shrink:0}
 .xb-comic-reader-title{font-size:20px;font-weight:700}.xb-comic-reader-chapter{font-size:16px;margin-top:6px;overflow-wrap:anywhere}.xb-comic-reader-location{font-size:12px;opacity:.7;margin-top:4px}
 .xb-comic-reader button{color:inherit;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(127,127,127,.15)}
